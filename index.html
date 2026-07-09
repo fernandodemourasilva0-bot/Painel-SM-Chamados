@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Gestão de Chamados Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Oculta abas inativas */
+        .tab-content { display: none; }
+        
+        /* Animação Suave ao trocar de aba */
+        .tab-content.active { 
+            display: block; 
+            animation: fadeInSlide 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes fadeInSlide {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Efeito nas linhas da tabela */
+        .table-row-hover {
+            transition: all 0.2s ease-in-out;
+        }
+        .table-row-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            background-color: #f8fafc;
+            z-index: 10;
+            position: relative;
+        }
+
+        /* Sistema de Toasts (Notificações) */
+        #toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .toast {
+            animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            transition: all 0.3s ease;
+        }
+        @keyframes slideInRight {
+            from { transform: translateX(110%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .toast.hide {
+            transform: translateX(110%);
+            opacity: 0;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-slate-50 text-gray-800 antialiased h-screen flex overflow-hidden">
+
+    <aside class="w-64 bg-white flex flex-col border-r border-gray-200 z-20 transition-all duration-300">
+        <div class="h-20 flex items-center px-6 border-b border-gray-200 bg-white">
+            <div class="bg-blue-600 p-2.5 rounded-lg shadow-md shadow-blue-500/20 flex items-center justify-center mr-3">
+                <i class="fa-solid fa-layer-group text-lg text-white"></i>
+            </div>
+            <div>
+                <h1 class="text-sm font-bold tracking-wide text-slate-800">Painel SM</h1>
+                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Gestão de Chamados</p>
+            </div>
+        </div>
+
+        <nav class="flex-1 py-6 space-y-1">
+            <button onclick="switchTab('dashboard')" id="tab-dashboard-btn" class="sidebar-btn w-full flex items-center px-6 py-3 text-sm font-semibold border-l-4 bg-blue-50/80 border-blue-600 text-blue-700 transition-all duration-200 group">
+                <i class="fa-solid fa-table-list w-6 text-center text-blue-600 group-hover:scale-110 transition-transform"></i>
+                <span class="ml-3">Painel de Controle</span>
+            </button>
+            
+            <button onclick="switchTab('analytics')" id="tab-analytics-btn" class="sidebar-btn w-full flex items-center px-6 py-3 text-sm font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-50 border-l-4 border-transparent transition-all duration-200 group">
+                <i class="fa-solid fa-chart-pie w-6 text-center group-hover:scale-110 transition-all"></i>
+                <span class="ml-3">Métricas & Gráficos</span>
+            </button>
+            
+            <button onclick="switchTab('vinc_manager')" id="tab-vinc_manager-btn" class="sidebar-btn w-full flex items-center px-6 py-3 text-sm font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-50 border-l-4 border-transparent transition-all duration-200 group">
+                <i class="fa-solid fa-bolt w-6 text-center group-hover:scale-110 transition-all"></i>
+                <span class="ml-3">Vínculos Inteligentes</span>
+            </button>
+        </nav>
+
+        <div class="p-6 border-t border-gray-200 text-xs text-slate-400 bg-white font-medium">
+            <p>V. Profissional 2.1</p>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col h-screen overflow-hidden">
+        
+        <header class="h-20 bg-white border-b border-gray-200 flex items-center justify-between px-8 z-10">
+            <div class="flex items-center text-gray-500 text-sm font-medium">
+                <i class="fa-regular fa-calendar mr-2 text-slate-400"></i>
+                <span id="data-hoje">Carregando data...</span>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                <label class="group flex items-center space-x-2 px-4 py-2 bg-slate-50 hover:bg-blue-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:text-blue-700 cursor-pointer transition-all duration-200 shadow-sm">
+                    <i class="fa-solid fa-file-import text-slate-500 group-hover:text-blue-600 transition-colors"></i>
+                    <span>Importar Planilha</span>
+                    <input type="file" id="excel-import" class="hidden" accept=".xlsx, .xls">
+                </label>
+                <button onclick="exportToExcel()" class="group flex items-center space-x-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-semibold shadow-md shadow-emerald-500/20 transition-all duration-200 hover:-translate-y-0.5">
+                    <i class="fa-solid fa-file-excel group-hover:scale-110 transition-transform"></i>
+                    <span>Exportar para Excel</span>
+                </button>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-8 relative">
+            
+            <div id="tab-dashboard" class="tab-content active space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-300 flex items-center justify-between relative overflow-hidden group">
+                        <div class="absolute w-1 h-full bg-blue-500 left-0 top-0 group-hover:w-2 transition-all duration-300"></div>
+                        <div class="pl-3">
+                            <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Em Atendimento</p>
+                            <h3 class="text-3xl font-black text-slate-800 mt-1" id="stat-atendimento">0</h3>
+                        </div>
+                        <div class="bg-blue-50 text-blue-500 p-3.5 rounded-xl group-hover:scale-110 transition-transform duration-300">
+                            <i class="fa-solid fa-spinner text-xl fa-spin-slow" style="animation-duration: 3s;"></i>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-300 flex items-center justify-between relative overflow-hidden group">
+                        <div class="absolute w-1 h-full bg-amber-500 left-0 top-0 group-hover:w-2 transition-all duration-300"></div>
+                        <div class="pl-3">
+                            <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Aguardando Retorno</p>
+                            <h3 class="text-3xl font-black text-slate-800 mt-1" id="stat-retorno">0</h3>
+                        </div>
+                        <div class="bg-amber-50 text-amber-500 p-3.5 rounded-xl group-hover:rotate-12 transition-transform duration-300">
+                            <i class="fa-solid fa-clock text-xl"></i>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-300 flex items-center justify-between relative overflow-hidden group">
+                        <div class="absolute w-1 h-full bg-purple-500 left-0 top-0 group-hover:w-2 transition-all duration-300"></div>
+                        <div class="pl-3">
+                            <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Atend. Pausado</p>
+                            <h3 class="text-3xl font-black text-slate-800 mt-1" id="stat-pausado">0</h3>
+                        </div>
+                        <div class="bg-purple-50 text-purple-500 p-3.5 rounded-xl group-hover:-rotate-12 transition-transform duration-300">
+                            <i class="fa-solid fa-pause text-xl"></i>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-300 flex items-center justify-between relative overflow-hidden group">
+                        <div class="absolute w-1 h-full bg-indigo-500 left-0 top-0 group-hover:w-2 transition-all duration-300"></div>
+                        <div class="pl-3">
+                            <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Total de Chamados</p>
+                            <h3 class="text-3xl font-black text-slate-800 mt-1" id="stat-total">0</h3>
+                        </div>
+                        <div class="bg-indigo-50 text-indigo-500 p-3.5 rounded-xl group-hover:scale-110 transition-transform duration-300">
+                            <i class="fa-solid fa-list-ol text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-2 pl-4 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4 relative z-10">
+                    <div class="flex flex-1 items-center gap-3">
+                        <div class="relative flex-1 max-w-sm group">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-3.5 text-gray-400 group-focus-within:text-blue-500 transition-colors"></i>
+                            <input type="text" id="search-input" oninput="renderTable()" placeholder="Buscar chamados..." class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-none rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-100 focus:bg-white transition-all outline-none">
+                        </div>
+                        <select id="filter-status" onchange="renderTable()" class="bg-gray-50 border-none rounded-lg text-sm font-medium px-4 py-2.5 focus:ring-2 focus:ring-blue-100 focus:bg-white transition-all outline-none cursor-pointer">
+                            <option value="">Todos os Status</option>
+                            <option value="EM ATENDIMENTO">Em Atendimento</option>
+                            <option value="AGUARDANDO RETORNO">Aguardando Retorno</option>
+                            <option value="ATENDIMENTO PAUSADO">Atendimento Pausado</option>
+                        </select>
+                        <select id="filter-priority" onchange="renderTable()" class="bg-gray-50 border-none rounded-lg text-sm font-medium px-4 py-2.5 focus:ring-2 focus:ring-blue-100 focus:bg-white transition-all outline-none cursor-pointer">
+                            <option value="">Todas as Prioridades</option>
+                            <option value="NORMAL">Normal</option>
+                            <option value="ALTA">Alta</option>
+                        </select>
+                    </div>
+                    <button onclick="openModal()" class="group flex items-center justify-center space-x-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold shadow-md shadow-blue-500/20 transition-all duration-200 hover:-translate-y-0.5 m-2">
+                        <i class="fa-solid fa-plus group-hover:rotate-90 transition-transform duration-300"></i>
+                        <span>Novo Chamado</span>
+                    </button>
+                </div>
+
+                <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-gray-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                                <th class="px-6 py-4">ID</th>
+                                <th class="px-6 py-4">Prioridade</th>
+                                <th class="px-6 py-4">Status</th>
+                                <th class="px-6 py-4">Solicitante / Área</th>
+                                <th class="px-6 py-4">Atendente</th>
+                                <th class="px-6 py-4">Tipo</th>
+                                <th class="px-6 py-4">Descrição</th>
+                                <th class="px-6 py-4 text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="chamados-table-body" class="divide-y divide-gray-100 text-sm">
+                            </tbody>
+                    </table>
+                    <div id="empty-state" class="hidden py-16 text-center text-slate-400">
+                        <i class="fa-solid fa-inbox text-5xl mb-4 text-slate-200 drop-shadow-sm"></i>
+                        <p class="text-lg font-medium text-slate-500">Nenhum chamado pendente encontrado.</p>
+                        <p class="text-sm mt-1">Sua lista está limpa ou os filtros ocultaram os resultados.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-analytics" class="tab-content space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                        <h4 class="text-sm font-bold text-slate-700 mb-6 flex items-center space-x-2">
+                            <div class="w-2 h-6 bg-blue-500 rounded-full"></div>
+                            <span>Distribuição por Status</span>
+                        </h4>
+                        <div class="relative h-64 flex items-center justify-center">
+                            <canvas id="chartStatus"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                        <h4 class="text-sm font-bold text-slate-700 mb-6 flex items-center space-x-2">
+                            <div class="w-2 h-6 bg-emerald-500 rounded-full"></div>
+                            <span>Carga de Trabalho por Atendente</span>
+                        </h4>
+                        <div class="relative h-64 flex items-center justify-center">
+                            <canvas id="chartAtendentes"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                    <h4 class="text-sm font-bold text-slate-700 mb-6 flex items-center space-x-2">
+                        <div class="w-2 h-6 bg-purple-500 rounded-full"></div>
+                        <span>Chamados Ativos por Área Solicitante</span>
+                    </h4>
+                    <div id="area-ranking" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
+                        </div>
+                </div>
+            </div>
+
+            <div id="tab-vinc_manager" class="tab-content space-y-6">
+                <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                    <h4 class="text-sm font-bold text-slate-700 mb-4 flex items-center space-x-2">
+                        <div class="w-2 h-6 bg-amber-500 rounded-full"></div>
+                        <span>Definir Vínculo Manualmente</span>
+                    </h4>
+                    <form id="vinc-manual-form" onsubmit="addVincManual(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Nome do Solicitante</label>
+                            <input type="text" id="vinc-solicitante" required placeholder="Ex: João Silva" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Área / Setor</label>
+                            <input type="text" id="vinc-area" required placeholder="Ex: GINF-DEAB" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all font-semibold uppercase">
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold py-2 shadow-md shadow-blue-500/10 transition-all duration-200 hover:-translate-y-0.5">
+                            <i class="fa-solid fa-plus mr-1"></i> Adicionar Vínculo
+                        </button>
+                    </form>
+                </div>
+
+                <div class="bg-white p-8 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-8 opacity-5">
+                        <i class="fa-solid fa-microchip text-9xl text-slate-800"></i>
+                    </div>
+                    <div class="flex items-center justify-between mb-8 relative z-10">
+                        <div>
+                            <h4 class="text-xl font-black text-slate-800">Memória de Vínculos</h4>
+                            <p class="text-sm text-slate-500 mt-1">Lista completa de associados mapeados de forma inteligente ou manual.</p>
+                        </div>
+                        <button onclick="clearAllVinc()" class="group flex items-center text-sm font-bold text-rose-600 hover:text-rose-700 border border-rose-200 bg-rose-50 px-4 py-2 rounded-lg transition-all">
+                            <i class="fa-solid fa-trash-can mr-2 group-hover:scale-110 transition-transform"></i> Resetar Memória
+                        </button>
+                    </div>
+                    <div class="max-h-96 overflow-y-auto border border-gray-200 rounded-xl relative z-10 bg-white">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead class="bg-slate-50 sticky top-0 text-xs font-bold text-slate-500 uppercase border-b border-gray-200">
+                                <tr>
+                                    <th class="px-6 py-4">Solicitante</th>
+                                    <th class="px-6 py-4">Área Vinculada</th>
+                                    <th class="px-6 py-4 text-right">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="vinc-table-body" class="divide-y divide-gray-100">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <div id="chamado-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden items-center justify-center z-50 p-4 transition-opacity duration-300 opacity-0">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden transform scale-95 transition-all duration-300 ease-out" id="modal-container">
+            <div class="bg-slate-800 px-6 py-5 flex items-center justify-between border-b border-slate-700">
+                <h3 id="modal-title" class="text-lg font-bold text-white flex items-center">
+                    <i class="fa-solid fa-pen-to-square mr-3 text-blue-400"></i> Novo Chamado
+                </h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white transition-colors p-1 hover:bg-slate-700 rounded-md"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            
+            <form id="chamado-form" onsubmit="saveChamado(event)" class="p-8 space-y-5">
+                <input type="hidden" id="edit-index">
+                
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">ID / Chamado *</label>
+                        <input type="text" id="modal-id" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Prioridade *</label>
+                        <select id="modal-prioridade" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all cursor-pointer">
+                            <option value="NORMAL">NORMAL</option>
+                            <option value="ALTA">ALTA</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Status *</label>
+                        <select id="modal-status" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all cursor-pointer">
+                            <option value="EM ATENDIMENTO">EM ATENDIMENTO</option>
+                            <option value="AGUARDANDO RETORNO">AGUARDANDO RETORNO</option>
+                            <option value="ATENDIMENTO PAUSADO">ATENDIMENTO PAUSADO</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Solicitante *</label>
+                        <input type="text" id="modal-solicitante" required oninput="autocompleteArea(this.value)" placeholder="Digite o nome..." class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex justify-between">
+                            <span>Área Solicitante *</span>
+                            <i class="fa-solid fa-wand-magic-sparkles text-amber-500 text-[10px]" title="Preenchimento automático inteligente"></i>
+                        </label>
+                        <input type="text" id="modal-area" required placeholder="Preenche sozinha se já mapeada" class="w-full border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-slate-50 font-medium">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Atendente *</label>
+                        <select id="modal-atendente" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all cursor-pointer">
+                            <option value="Juliana Ordones">Juliana Ordones</option>
+                            <option value="Izabela Dobscha">Izabela Dobscha</option>
+                            <option value="Fernando Moura">Fernando Moura</option>
+                            <option value="Erica Hernandes">Erica Hernandes</option>
+                            <option value="Lívia Castro">Lívia Castro</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Tipo de Documento</label>
+                        <input type="text" id="modal-tipo" placeholder="Ex: RD, NA, MO, PO" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Descrição</label>
+                    <textarea id="modal-descricao" rows="3" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all" placeholder="Resumo do chamado..."></textarea>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4 border-t border-slate-100">
+                    <button type="button" onclick="closeModal()" class="px-5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors">Cancelar</button>
+                    <button type="submit" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold shadow-md shadow-blue-500/20 hover:-translate-y-0.5 transition-all">Salvar Chamado</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <script>
+        // Configuração da Data do Header
+        const optionsData = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('data-hoje').innerText = new Date().toLocaleDateString('pt-BR', optionsData);
+
+        let chamados = JSON.parse(localStorage.getItem('chamados_db')) || [];
+        let vinculacaoArea = JSON.parse(localStorage.getItem('vinculos_db')) || {};
+        let instChartStatus = null;
+        let instChartAtendentes = null;
+
+        // Carga padrão caso o storage esteja vazio
+        if (chamados.length === 0 && Object.keys(vinculacaoArea).length === 0) {
+            chamados = [
+                {id: "1311", prioridade: "NORMAL", status: "AGUARDANDO RETORNO", solicitante: "Rafael Dorchete", area: "CSC-DESU", atendente: "Juliana Ordones", tipo: "NA, RD", descricao: "DESU - NA0901 e RD0806 Critérios para realização de compras", data_criacao: "2022-07-29", ultima_mod: "2026-01-27"},
+                {id: "1448", prioridade: "NORMAL", status: "AGUARDANDO RETORNO", solicitante: "Cristina Santana", area: "GNEM", atendente: "Izabela Dobscha", tipo: "RD", descricao: "NA1301 Salão de Eventos Minas Náutico", data_criacao: "2022-08-11", ultima_mod: "2025-10-01"},
+                {id: "1528", prioridade: "ALTA", status: "EM ATENDIMENTO", solicitante: "Ilídio Salgado Brandão", area: "GINF-DEMA", atendente: "Izabela Dobscha", tipo: "PO", descricao: "Normatizar CFTV x CCO", data_criacao: "2022-08-17", ultima_mod: "2025-10-23"}
+            ];
+            vinculacaoArea = { "Rafael Dorchete": "CSC-DESU", "Cristina Santana": "GNEM", "Ilídio Salgado Brandão": "GINF-DEMA" };
+            saveToStorage();
+        }
+
+        function saveToStorage() {
+            localStorage.setItem('chamados_db', JSON.stringify(chamados));
+            localStorage.setItem('vinculos_db', JSON.stringify(vinculacaoArea));
+        }
+
+        // Sistema de Notificações Customizado (Toast)
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            let bgClass = 'bg-emerald-50 border-emerald-200 text-emerald-800';
+            let iconClass = 'fa-solid fa-circle-check text-emerald-500';
+            
+            if (type === 'error' || type === 'danger') {
+                bgClass = 'bg-rose-50 border-rose-200 text-rose-800';
+                iconClass = 'fa-solid fa-circle-xmark text-rose-500';
+            } else if (type === 'info') {
+                bgClass = 'bg-blue-50 border-blue-200 text-blue-800';
+                iconClass = 'fa-solid fa-circle-info text-blue-500';
+            } else if (type === 'warning') {
+                bgClass = 'bg-amber-50 border-amber-200 text-amber-800';
+                iconClass = 'fa-solid fa-triangle-exclamation text-amber-500';
+            }
+
+            toast.className = `toast border flex items-center p-4 rounded-xl shadow-lg max-w-sm font-medium ${bgClass}`;
+            toast.innerHTML = `
+                <i class="${iconClass} text-lg mr-3"></i>
+                <span class="text-sm">${message}</span>
+            `;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.add('hide');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        // Troca de Abas integrada à Sidebar Light
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            
+            document.querySelectorAll('.sidebar-btn').forEach(el => {
+                el.classList.remove('bg-blue-50/80', 'border-blue-600', 'text-blue-700');
+                el.classList.add('border-transparent', 'text-slate-500');
+                el.querySelector('i').classList.remove('text-blue-600', 'text-yellow-600');
+            });
+
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+            
+            const clickedBtn = document.getElementById(`tab-${tabName}-btn`);
+            clickedBtn.classList.remove('border-transparent', 'text-slate-500');
+            clickedBtn.classList.add('bg-blue-50/80', 'border-blue-600', 'text-blue-700');
+            
+            if(tabName === 'dashboard' || tabName === 'analytics') clickedBtn.querySelector('i').classList.add('text-blue-600');
+            if(tabName === 'vinc_manager') clickedBtn.querySelector('i').classList.add('text-yellow-600');
+
+            if (tabName === 'analytics') { buildCharts(); }
+            if (tabName === 'vinc_manager') { renderVincTable(); }
+        }
+
+        function autocompleteArea(nome) {
+            const areaInput = document.getElementById('modal-area');
+            const nomeFormatado = nome.trim();
+            if (vinculacaoArea[nomeFormatado]) {
+                areaInput.value = vinculacaoArea[nomeFormatado];
+                areaInput.classList.remove('bg-slate-50', 'text-slate-800');
+                areaInput.classList.add('bg-blue-50', 'text-blue-700', 'border-blue-300');
+            } else {
+                areaInput.value = '';
+                areaInput.classList.remove('bg-blue-50', 'text-blue-700', 'border-blue-300');
+                areaInput.classList.add('bg-slate-50', 'text-slate-800');
+            }
+        }
+
+        // Cadastro Manual de Vínculos
+        function addVincManual(e) {
+            e.preventDefault();
+            const sol = document.getElementById('vinc-solicitante').value.trim();
+            const area = document.getElementById('vinc-area').value.trim();
+            
+            if(!sol || !area) return;
+
+            vinculacaoArea[sol] = area;
+            saveToStorage();
+            renderVincTable();
+            document.getElementById('vinc-manual-form').reset();
+            showToast('Novo vínculo salvo com sucesso!');
+        }
+
+        function renderTable() {
+            const body = document.getElementById('chamados-table-body');
+            const emptyState = document.getElementById('empty-state');
+            const search = document.getElementById('search-input').value.toLowerCase();
+            const filterStatus = document.getElementById('filter-status').value;
+            const filterPriority = document.getElementById('filter-priority').value;
+
+            body.innerHTML = '';
+
+            let filtered = chamados.filter(item => {
+                const matchSearch = !search || item.id.toString().toLowerCase().includes(search) || item.solicitante.toLowerCase().includes(search) || item.atendente.toLowerCase().includes(search) || item.descricao.toLowerCase().includes(search);
+                const matchStatus = !filterStatus || item.status === filterStatus;
+                const matchPriority = !filterPriority || item.prioridade === filterPriority;
+                return matchSearch && matchStatus && matchPriority;
+            });
+
+            document.getElementById('stat-atendimento').innerText = chamados.filter(c => c.status === 'EM ATENDIMENTO').length;
+            document.getElementById('stat-retorno').innerText = chamados.filter(c => c.status === 'AGUARDANDO RETORNO').length;
+            document.getElementById('stat-pausado').innerText = chamados.filter(c => c.status === 'ATENDIMENTO PAUSADO').length;
+            document.getElementById('stat-total').innerText = chamados.length;
+
+            if(filtered.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+
+            filtered.forEach((item) => {
+                let statusClass = 'bg-slate-100 text-slate-700';
+                if(item.status === 'EM ATENDIMENTO') statusClass = 'bg-blue-100 text-blue-800 border border-blue-200';
+                if(item.status === 'AGUARDANDO RETORNO') statusClass = 'bg-amber-100 text-amber-800 border border-amber-200';
+                if(item.status === 'ATENDIMENTO PAUSADO') statusClass = 'bg-purple-100 text-purple-800 border border-purple-200';
+
+                let prioClass = item.prioridade === 'ALTA' ? 'bg-rose-100 text-rose-800 font-bold border border-rose-200' : 'bg-slate-100 text-slate-600 border border-slate-200';
+
+                const tr = document.createElement('tr');
+                tr.className = "table-row-hover bg-white";
+                tr.innerHTML = `
+                    <td class="px-6 py-4 font-mono font-bold text-slate-800">#${item.id}</td>
+                    <td class="px-6 py-4"><span class="px-3 py-1 rounded-md text-[11px] shadow-sm ${prioClass}">${item.prioridade}</span></td>
+                    <td class="px-6 py-4"><span class="px-3 py-1 rounded-md text-[11px] shadow-sm font-bold ${statusClass}">${item.status}</span></td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm font-bold text-slate-800">${item.solicitante}</div>
+                        <div class="text-[11px] text-blue-600 font-bold uppercase tracking-wide mt-0.5">${item.area}</div>
+                    </td>
+                    <td class="px-6 py-4 font-medium text-slate-600">
+                        <div class="flex items-center"><div class="w-6 h-6 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center text-[10px] font-bold mr-2">${item.atendente.charAt(0)}</div>${item.atendente}</div>
+                    </td>
+                    <td class="px-6 py-4"><span class="bg-slate-100 text-slate-700 text-xs px-2.5 py-1 rounded font-mono border border-slate-200">${item.tipo || 'N/A'}</span></td>
+                    <td class="px-6 py-4 text-xs max-w-[200px] truncate text-slate-500" title="${item.descricao}">${item.descricao || '-'}</td>
+                    <td class="px-6 py-4 text-right space-x-2 whitespace-nowrap">
+                        <button onclick="editChamado('${item.id}')" class="text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 p-2 rounded-lg transition-colors shadow-sm" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button onclick="deleteChamado('${item.id}')" class="text-rose-500 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 p-2 rounded-lg transition-colors shadow-sm" title="Excluir"><i class="fa-solid fa-trash-can"></i></button>
+                    </td>
+                `;
+                body.appendChild(tr);
+            });
+        }
+
+        function openModal(id = null) {
+            const form = document.getElementById('chamado-form');
+            form.reset();
+            document.getElementById('edit-index').value = '';
+            document.getElementById('modal-id').disabled = false;
+            document.getElementById('modal-title').innerHTML = '<i class="fa-solid fa-pen-to-square mr-3 text-blue-400"></i> Novo Chamado';
+            
+            document.getElementById('modal-area').classList.remove('bg-blue-50', 'text-blue-700', 'border-blue-300');
+            document.getElementById('modal-area').classList.add('bg-slate-50', 'text-slate-800');
+
+            if(id) {
+                const item = chamados.find(c => c.id.toString() === id.toString());
+                if(item) {
+                    document.getElementById('modal-title').innerHTML = `<i class="fa-solid fa-pen-to-square mr-3 text-blue-400"></i> Editar #${item.id}`;
+                    document.getElementById('edit-index').value = item.id;
+                    document.getElementById('modal-id').value = item.id;
+                    document.getElementById('modal-id').disabled = true;
+                    document.getElementById('modal-prioridade').value = item.prioridade;
+                    document.getElementById('modal-status').value = item.status;
+                    document.getElementById('modal-solicitante').value = item.solicitante;
+                    document.getElementById('modal-area').value = item.area;
+                    document.getElementById('modal-atendente').value = item.atendente;
+                    document.getElementById('modal-tipo').value = item.tipo || '';
+                    document.getElementById('modal-descricao').value = item.descricao || '';
+                    autocompleteArea(item.solicitante);
+                }
+            }
+
+            const modal = document.getElementById('chamado-modal');
+            const container = document.getElementById('modal-container');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                container.classList.remove('scale-95');
+                container.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('chamado-modal');
+            const container = document.getElementById('modal-container');
+            
+            modal.classList.add('opacity-0');
+            container.classList.remove('scale-100');
+            container.classList.add('scale-95');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 300);
+        }
+
+        function saveChamado(e) {
+            e.preventDefault();
+            const editId = document.getElementById('edit-index').value;
+            const id = document.getElementById('modal-id').value.trim();
+            const solicitante = document.getElementById('modal-solicitante').value.trim();
+            const area = document.getElementById('modal-area').value.trim();
+            
+            const itemData = {
+                id: id,
+                prioridade: document.getElementById('modal-prioridade').value,
+                status: document.getElementById('modal-status').value,
+                solicitante: solicitante,
+                area: area,
+                atendente: document.getElementById('modal-atendente').value,
+                tipo: document.getElementById('modal-tipo').value.trim(),
+                descricao: document.getElementById('modal-descricao').value.trim(),
+                ultima_mod: new Date().toISOString().split('T')[0]
+            };
+
+            if (solicitante && area) vinculacaoArea[solicitante] = area;
+
+            if(editId) {
+                const index = chamados.findIndex(c => c.id.toString() === editId.toString());
+                if(index > -1) {
+                    chamados[index] = { ...chamados[index], ...itemData };
+                    showToast(`Chamado #${id} atualizado.`);
+                }
+            } else {
+                if (chamados.some(c => c.id.toString() === id.toString())) {
+                    showToast('Erro: Já existe um chamado com este ID!', 'error');
+                    return;
+                }
+                itemData.data_criacao = new Date().toISOString().split('T')[0];
+                chamados.push(itemData);
+                showToast(`Chamado #${id} criado.`);
+            }
+
+            saveToStorage();
+            closeModal();
+            renderTable();
+        }
+
+        function editChamado(id) { openModal(id); }
+        
+        function deleteChamado(id) {
+            if(confirm(`Excluir chamado #${id} permanentemente?`)) {
+                chamados = chamados.filter(c => c.id.toString() !== id.toString());
+                saveToStorage();
+                renderTable();
+                showToast('Chamado removido da lista.', 'info');
+            }
+        }
+
+        function buildCharts() {
+            if(instChartStatus) instChartStatus.destroy();
+            if(instChartAtendentes) instChartAtendentes.destroy();
+
+            const countAtend = chamados.filter(c => c.status === 'EM ATENDIMENTO').length;
+            const countRet = chamados.filter(c => c.status === 'AGUARDANDO RETORNO').length;
+            const countPaus = chamados.filter(c => c.status === 'ATENDIMENTO PAUSADO').length;
+
+            const ctxStatus = document.getElementById('chartStatus').getContext('2d');
+            instChartStatus = new Chart(ctxStatus, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Em Atendimento', 'Aguardando Retorno', 'Atendimento Pausado'],
+                    datasets: [{
+                        data: [countAtend, countRet, countPaus],
+                        backgroundColor: ['#3b82f6', '#f59e0b', '#a855f7'],
+                        borderWidth: 0,
+                        hoverOffset: 10
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom' } } }
+            });
+
+            const atendentesMapeados = ['Juliana Ordones', 'Izabela Dobscha', 'Fernando Moura', 'Erica Hernandes', 'Lívia Castro'];
+            const cargaAtendentes = atendentesMapeados.map(at => chamados.filter(c => c.atendente === at).length);
+
+            const ctxAtend = document.getElementById('chartAtendentes').getContext('2d');
+            instChartAtendentes = new Chart(ctxAtend, {
+                type: 'bar',
+                data: {
+                    labels: atendentesMapeados.map(a => a.split(' ')[0]),
+                    datasets: [{
+                        label: 'Chamados',
+                        data: cargaAtendentes,
+                        backgroundColor: '#10b981',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { display: false } }, x: { grid: { display: false } } }
+                }
+            });
+
+            const areaRankingDiv = document.getElementById('area-ranking');
+            areaRankingDiv.innerHTML = '';
+            let areaCounts = {};
+            chamados.forEach(c => { if(c.area) areaCounts[c.area] = (areaCounts[c.area] || 0) + 1; });
+
+            if(Object.keys(areaCounts).length === 0) {
+                areaRankingDiv.innerHTML = '<p class="text-sm text-slate-400">Nenhum dado.</p>';
+                return;
+            }
+
+            Object.entries(areaCounts).sort((a,b) => b[1] - a[1]).forEach(([areaName, count]) => {
+                const card = document.createElement('div');
+                card.className = "bg-slate-50 border border-slate-200 p-4 rounded-xl text-center shadow-sm hover:bg-slate-100 transition-colors";
+                card.innerHTML = `
+                    <div class="text-[10px] font-black text-slate-500 truncate uppercase tracking-widest">${areaName}</div>
+                    <div class="text-2xl font-black text-purple-600 mt-1">${count}</div>
+                `;
+                areaRankingDiv.appendChild(card);
+            });
+        }
+
+        function renderVincTable() {
+            const tbody = document.getElementById('vinc-table-body');
+            tbody.innerHTML = '';
+            const entries = Object.entries(vinculacaoArea);
+
+            if(entries.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="px-6 py-8 text-center text-slate-400 font-medium">Nenhum vínculo aprendido ou cadastrado.</td></tr>`;
+                return;
+            }
+
+            entries.forEach(([solicitante, area]) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-colors";
+                tr.innerHTML = `
+                    <td class="px-6 py-4 font-bold text-slate-800">${solicitante}</td>
+                    <td class="px-6 py-4 text-blue-600 font-bold uppercase text-[11px] tracking-wider"><span class="bg-blue-50 px-3 py-1 rounded border border-blue-100">${area}</span></td>
+                    <td class="px-6 py-4 text-right">
+                        <button onclick="deleteVinc('${solicitante}')" class="text-xs font-bold text-rose-500 hover:text-white hover:bg-rose-500 px-3 py-1.5 rounded transition-colors"><i class="fa-solid fa-eraser"></i> Esquecer</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function deleteVinc(solicitante) {
+            delete vinculacaoArea[solicitante];
+            saveToStorage();
+            renderVincTable();
+            showToast('Associação de vínculo removida.', 'info');
+        }
+
+        function clearAllVinc() {
+            if(confirm("Deseja realmente apagar a memória de todos os vínculos?")) {
+                vinculacaoArea = {};
+                saveToStorage();
+                renderVincTable();
+                showToast('Toda a memória de vínculos foi limpa.', 'warning');
+            }
+        }
+
+        // Importação SheetJS
+        document.getElementById('excel-import').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetName = workbook.SheetNames.includes('Principal') ? 'Principal' : workbook.SheetNames[0];
+                const json = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+                if(json.length === 0) {
+                    showToast('A planilha importada está vazia!', 'error');
+                    return;
+                }
+
+                let importadosContador = 0;
+                json.forEach(row => {
+                    const id = row['ID'] || row['id'] || row['Número'] || row['NUMERO'];
+                    if (!id) return;
+
+                    const statusCru = (row['STATUS'] || row['status'] || 'EM ATENDIMENTO').toString().toUpperCase().trim();
+                    const statusValido = ['EM ATENDIMENTO', 'AGUARDANDO RETORNO', 'ATENDIMENTO PAUSADO'].includes(statusCru) ? statusCru : 'EM ATENDIMENTO';
+
+                    const item = {
+                        id: id.toString(),
+                        prioridade: (row['PRIORIDADE'] || row['prioridade'] || 'NORMAL').toString().toUpperCase().trim() === 'ALTA' ? 'ALTA' : 'NORMAL',
+                        status: statusValido,
+                        solicitante: row['SOLICITANTE'] || row['solicitante'] || 'Desconhecido',
+                        area: row['ÁREA SOLICITANTE'] || row['ÁREA'] || row['area solicitante'] || 'Setor Geral',
+                        atendente: row['ATENDENTE'] || row['atendente'] || 'Juliana Ordones',
+                        tipo: row['TIPO'] || row['tipo'] || '',
+                        descricao: row['DESCRIÇÃO'] || row['descrição'] || row['descricao'] || '',
+                        data_criacao: row['DATA DE CRIAÇÃO'] || new Date().toISOString().split('T')[0],
+                        ultima_mod: row['ÚLTIMA MODIFICAÇÃO'] || new Date().toISOString().split('T')[0]
+                    };
+
+                    if (item.solicitante && item.area) vinculacaoArea[item.solicitante.trim()] = item.area.trim();
+
+                    const existingIdx = chamados.findIndex(c => c.id.toString() === item.id.toString());
+                    if (existingIdx > -1) chamados[existingIdx] = item;
+                    else chamados.push(item);
+                    importadosContador++;
+                });
+                saveToStorage(); 
+                renderTable();
+                showToast(`${importadosContador} chamados processados do Excel!`, 'success');
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // Exportação ExcelJS Formatação
+        async function exportToExcel() {
+            if(chamados.length === 0) {
+                showToast('Nenhum dado cadastrado para exportar.', 'warning');
+                return;
+            }
+            
+            const btn = document.querySelector('button[onclick="exportToExcel()"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Exportando...';
+
+            setTimeout(async () => {
+                const workbook = new ExcelJS.Workbook();
+                const worksheet = workbook.addWorksheet('Principal', { views: [{ state: 'frozen', ySplit: 1 }] });
+
+                worksheet.columns = [
+                    { header: 'ID', key: 'id', width: 10 },
+                    { header: 'PRIORIDADE', key: 'prioridade', width: 15 },
+                    { header: 'DATA DE CRIAÇÃO', key: 'data_criacao', width: 20 },
+                    { header: 'ÚLTIMA MODIFICAÇÃO', key: 'ultima_mod', width: 22 },
+                    { header: 'STATUS', key: 'status', width: 25 },
+                    { header: 'SOLICITANTE', key: 'solicitante', width: 30 },
+                    { header: 'ÁREA SOLICITANTE', key: 'area', width: 22 },
+                    { header: 'ATENDENTE', key: 'atendente', width: 25 },
+                    { header: 'TIPO', key: 'tipo', width: 15 },
+                    { header: 'DESCRIÇÃO', key: 'descricao', width: 60 },
+                    { header: 'SGQ', key: 'sgq', width: 10 },
+                    { header: 'Antigos até dez/2024', key: 'antigos', width: 25 },
+                    { header: '2025 até o momento', key: 'novo', width: 25 },
+                    { header: 'Risco que a desatualização pode trazer', key: 'risco', width: 40 }
+                ];
+
+                const headerRow = worksheet.getRow(1);
+                headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4372C4' } };
+                headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+                worksheet.autoFilter = 'A1:N1';
+
+                chamados.forEach(c => {
+                    worksheet.addRow({
+                        id: Number(c.id) || c.id, prioridade: c.prioridade, data_criacao: c.data_criacao,
+                        ultima_mod: c.ultima_mod, status: c.status, solicitante: c.solicitante,
+                        area: c.area, atendente: c.atendente, tipo: c.tipo, descricao: c.descricao,
+                        sgq: '', antigos: '', novo: '', risco: ''
+                    });
+                });
+
+                worksheet.eachRow((row, rowNumber) => {
+                    if(rowNumber > 1) row.alignment = { vertical: 'middle', wrapText: true };
+                    row.eachCell({ includeEmpty: true }, (cell) => {
+                        cell.border = {
+                            top: { style: 'thin', color: { argb: 'FFBFBFBF' } }, left: { style: 'thin', color: { argb: 'FFBFBFBF' } },
+                            bottom: { style: 'thin', color: { argb: 'FFBFBFBF' } }, right: { style: 'thin', color: { argb: 'FFBFBFBF' } }
+                        };
+                    });
+                });
+
+                const buffer = await workbook.xlsx.writeBuffer();
+                const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                const dataAtual = new Date().toISOString().split('T')[0];
+                saveAs(blob, `HISTORICO_SM_ATUALIZADO_${dataAtual}.xlsx`);
+                
+                btn.innerHTML = originalText;
+                showToast('Planilha baixada com sucesso!');
+            }, 500);
+        }
+
+        window.onload = function() { renderTable(); };
+    </script>
+</body>
+</html>
