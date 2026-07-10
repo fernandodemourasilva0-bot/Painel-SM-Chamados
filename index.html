@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel de Gestão de Chamados Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></link>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -13,806 +13,792 @@
     
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-    
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; }
-        
-        .tab-content { display: none; }
-        .tab-content.active { 
-            display: block; 
-            animation: fadeInSlide 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-
-        @keyframes fadeInSlide {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .table-row-hover { transition: all 0.2s ease-in-out; }
-        .table-row-hover:hover {
-            transform: translateY(-1px);
-            background-color: #f8fafc;
-        }
-
-        #toast-container {
-            position: fixed;
-            bottom: 16px;
-            right: 16px;
-            left: 16px;
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            pointer-events: none;
-        }
-        @media(min-width: 640px) {
-            #toast-container { left: auto; width: 350px; }
-        }
-        .toast {
-            pointer-events: auto;
-            animation: slideInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-        @keyframes slideInUp {
-            from { transform: translateY(50px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-        .toast.hide { transform: translateX(110%); opacity: 0; transition: all 0.3s ease; }
-    </style>
 </head>
-<body class="bg-slate-50 text-gray-800 antialiased h-screen flex flex-col md:flex-row overflow-hidden">
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen flex flex-col antialiased selection:bg-cyan-500 selection:text-slate-900">
 
-    <div class="md:hidden h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 z-30 shrink-0">
-        <div class="flex items-center">
-            <div class="bg-blue-600 p-2 rounded-lg text-white mr-3">
-                <i class="fa-solid fa-layer-group text-sm"></i>
-            </div>
-            <span class="text-sm font-bold text-slate-800">Painel SM</span>
-        </div>
-        <button onclick="toggleMobileSidebar()" class="text-slate-600 focus:outline-none p-2 rounded-lg hover:bg-slate-100">
-            <i class="fa-solid fa-bars text-xl" id="menu-icon"></i>
-        </button>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAs6-D...",
+            authDomain: "chamados-nuvem.firebaseapp.com",
+            projectId: "chamados-nuvem",
+            storageBucket: "chamados-nuvem.appspot.com",
+            messagingSenderId: "1055...",
+            appId: "1:1055..."
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+    </script>
+
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-3 pointer-events-none"></div>
+
+    <div id="global-alert-banner" class="hidden bg-gradient-to-r from-red-600 via-amber-600 to-red-600 text-white text-center py-2 px-4 font-bold text-sm tracking-wide animate-pulse shadow-lg flex items-center justify-center gap-2 border-b border-red-500/20">
+        <i class="fa-solid fa-triangle-exclamation text-base"></i>
+        <span>ALERTA CRÍTICO: INSTABILIDADE DETECTADA NO SISTEMA PRINCIPAL. MONITORIZAÇÃO ATIVA.</span>
     </div>
 
-    <aside id="sidebar" class="fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 w-64 bg-white flex flex-col border-r border-gray-200 z-40 transition-transform duration-300 ease-in-out h-full shrink-0">
-        <div class="h-20 flex items-center px-6 border-b border-gray-200 bg-white">
-            <div class="bg-blue-600 p-2.5 rounded-lg shadow-md shadow-blue-500/20 flex items-center justify-center mr-3">
-                <i class="fa-solid fa-layer-group text-lg text-white"></i>
-            </div>
-            <div>
-                <h1 class="text-sm font-bold tracking-wide text-slate-800">Painel SM</h1>
-                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Gestão de Chamados</p>
-            </div>
-        </div>
-
-        <nav class="flex-1 py-6 space-y-1 overflow-y-auto">
-            <button onclick="switchTab('dashboard')" id="tab-dashboard-btn" class="sidebar-btn w-full flex items-center px-6 py-3 text-sm font-semibold border-l-4 bg-blue-50/80 border-blue-600 text-blue-700 transition-all duration-200">
-                <i class="fa-solid fa-table-list w-6 text-center text-blue-600"></i>
-                <span class="ml-3">Painel de Controle</span>
-            </button>
-            
-            <button onclick="switchTab('analytics')" id="tab-analytics-btn" class="sidebar-btn w-full flex items-center px-6 py-3 text-sm font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-50 border-l-4 border-transparent transition-all duration-200">
-                <i class="fa-solid fa-chart-pie w-6 text-center"></i>
-                <span class="ml-3">Métricas & Gráficos</span>
-            </button>
-            
-            <button onclick="switchTab('vinc_manager')" id="tab-vinc_manager-btn" class="sidebar-btn w-full flex items-center px-6 py-3 text-sm font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-50 border-l-4 border-transparent transition-all duration-200">
-                <i class="fa-solid fa-bolt w-6 text-center"></i>
-                <span class="ml-3">Vínculos Inteligentes</span>
-            </button>
-        </nav>
-
-        <div class="p-6 border-t border-gray-200 text-xs text-slate-400 bg-white font-medium">
-            <p>V. Nuvem Sincronizada 3.0</p>
-        </div>
-    </aside>
-
-    <div id="sidebar-backdrop" onclick="toggleMobileSidebar()" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-30 hidden md:hidden"></div>
-
-    <main class="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+    <div class="flex flex-1 overflow-hidden h-screen relative">
         
-        <header class="hidden md:flex h-20 bg-white border-b border-gray-200 items-center justify-between px-8 z-10 shrink-0">
-            <div class="flex items-center text-gray-500 text-sm font-medium">
-                <i class="fa-regular fa-calendar mr-2 text-slate-400"></i>
-                <span id="data-hoje">Carregando data...</span>
-            </div>
-            
-            <div class="flex items-center space-x-4">
-                <label class="group flex items-center space-x-2 px-4 py-2 bg-slate-50 hover:bg-blue-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:text-blue-700 cursor-pointer transition-all duration-200 shadow-sm">
-                    <i class="fa-solid fa-file-import text-slate-500 group-hover:text-blue-600"></i>
-                    <span>Importar Planilha</span>
-                    <input type="file" id="excel-import" class="hidden" accept=".xlsx, .xls">
-                </label>
-                <button onclick="exportToExcel()" class="group flex items-center space-x-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-semibold shadow-md transition-all duration-200">
-                    <i class="fa-solid fa-file-excel"></i>
-                    <span>Exportar Excel</span>
-                </button>
-            </div>
-        </header>
-
-        <div class="md:hidden bg-white px-4 py-3 border-b border-gray-200 flex gap-2 shrink-0">
-            <label class="flex-1 flex items-center justify-center space-x-1 py-2 bg-slate-100 rounded-lg text-xs font-bold text-slate-700 cursor-pointer">
-                <i class="fa-solid fa-file-import"></i>
-                <span>Importar</span>
-                <input type="file" id="excel-import-mobile" class="hidden" accept=".xlsx, .xls">
-            </label>
-            <button onclick="exportToExcel()" class="flex-1 flex items-center justify-center space-x-1 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold">
-                <i class="fa-solid fa-file-excel"></i>
-                <span>Exportar</span>
-            </button>
-        </div>
-
-        <div class="flex-1 overflow-y-auto p-4 md:p-8 relative">
-            
-            <div id="tab-dashboard" class="tab-content active space-y-6">
-                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-                    <div class="bg-white p-4 md:p-5 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between relative overflow-hidden">
-                        <div class="absolute w-1 h-full bg-blue-500 left-0 top-0"></div>
-                        <div>
-                            <p class="text-[10px] md:text-[11px] font-bold text-gray-400 uppercase tracking-wider">Em Atendimento</p>
-                            <h3 class="text-2xl md:text-3xl font-black text-slate-800 mt-1" id="stat-atendimento">0</h3>
-                        </div>
-                        <div class="hidden sm:block bg-blue-50 text-blue-500 p-3 rounded-xl"><i class="fa-solid fa-spinner fa-spin-slow"></i></div>
+        <aside class="hidden lg:flex flex-col w-72 bg-slate-950 border-r border-slate-800/60 p-5 gap-6 justify-between shrink-0 shadow-2xl z-20">
+            <div class="flex flex-col gap-6">
+                <div class="flex items-center gap-3 px-2 py-1">
+                    <div class="bg-gradient-to-tr from-cyan-500 to-blue-600 w-10 h-10 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                        <i class="fa-solid fa-headset text-white text-xl"></i>
                     </div>
-
-                    <div class="bg-white p-4 md:p-5 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between relative overflow-hidden">
-                        <div class="absolute w-1 h-full bg-amber-500 left-0 top-0"></div>
-                        <div>
-                            <p class="text-[10px] md:text-[11px] font-bold text-gray-400 uppercase tracking-wider">Aguardando Retorno</p>
-                            <h3 class="text-2xl md:text-3xl font-black text-slate-800 mt-1" id="stat-retorno">0</h3>
-                        </div>
-                        <div class="hidden sm:block bg-amber-50 text-amber-500 p-3 rounded-xl"><i class="fa-solid fa-clock"></i></div>
-                    </div>
-
-                    <div class="bg-white p-4 md:p-5 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between relative overflow-hidden">
-                        <div class="absolute w-1 h-full bg-purple-500 left-0 top-0"></div>
-                        <div>
-                            <p class="text-[10px] md:text-[11px] font-bold text-gray-400 uppercase tracking-wider">Atend. Pausado</p>
-                            <h3 class="text-2xl md:text-3xl font-black text-slate-800 mt-1" id="stat-pausado">0</h3>
-                        </div>
-                        <div class="hidden sm:block bg-purple-50 text-purple-500 p-3 rounded-xl"><i class="fa-solid fa-pause"></i></div>
-                    </div>
-
-                    <div class="bg-white p-4 md:p-5 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between relative overflow-hidden">
-                        <div class="absolute w-1 h-full bg-indigo-500 left-0 top-0"></div>
-                        <div>
-                            <p class="text-[10px] md:text-[11px] font-bold text-gray-400 uppercase tracking-wider">Total de Chamados</p>
-                            <h3 class="text-2xl md:text-3xl font-black text-slate-800 mt-1" id="stat-total">0</h3>
-                        </div>
-                        <div class="hidden sm:block bg-indigo-50 text-indigo-500 p-3 rounded-xl"><i class="fa-solid fa-list-ol"></i></div>
+                    <div>
+                        <h1 class="text-lg font-black tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">NUVEM HELPDESK</h1>
+                        <span class="text-[10px] text-cyan-400 font-bold tracking-widest uppercase">Enterprise Pro</span>
                     </div>
                 </div>
 
-                <div class="bg-white p-3 rounded-xl border border-gray-200 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 flex-1">
-                        <div class="relative">
-                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-gray-400"></i>
-                            <input type="text" id="search-input" oninput="renderTable()" placeholder="Buscar chamados..." class="w-full pl-9 pr-3 py-2 bg-gray-50 border-none rounded-lg text-xs md:text-sm font-medium outline-none">
-                        </div>
-                        <select id="filter-status" onchange="renderTable()" class="bg-gray-50 border-none rounded-lg text-xs md:text-sm font-medium px-3 py-2 outline-none cursor-pointer">
-                            <option value="">Todos os Status</option>
-                            <option value="EM ATENDIMENTO">Em Atendimento</option>
-                            <option value="AGUARDANDO RETORNO">Aguardando Retorno</option>
-                            <option value="ATENDIMENTO PAUSADO">Atendimento Pausado</option>
-                        </select>
-                        <select id="filter-priority" onchange="renderTable()" class="bg-gray-50 border-none rounded-lg text-xs md:text-sm font-medium px-3 py-2 outline-none cursor-pointer">
-                            <option value="">Todas as Prioridades</option>
-                            <option value="NORMAL">Normal</option>
-                            <option value="ALTA">Alta</option>
-                        </select>
+                <nav class="flex flex-col gap-1">
+                    <button onclick="switchTab('dashboard')" id="btn-tab-dashboard" class="nav-btn active flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 bg-gradient-to-r from-cyan-500/10 to-transparent text-cyan-400 border-l-4 border-cyan-500">
+                        <i class="fa-solid fa-chart-pie text-base w-5 text-center"></i> Dashboard Operacional
+                    </button>
+                    <button onclick="switchTab('chamados')" id="btn-tab-chamados" class="nav-btn flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-900/50 border-l-4 border-transparent">
+                        <i class="fa-solid fa-list-check text-base w-5 text-center"></i> Gestão de Chamados
+                    </button>
+                    <button onclick="switchTab('configuracoes')" id="btn-tab-configuracoes" class="nav-btn flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 text-slate-400 hover:text-slate-200 hover:bg-slate-900/50 border-l-4 border-transparent">
+                        <i class="fa-solid fa-sliders text-base w-5 text-center"></i> Configurações & Infra
+                    </button>
+                </nav>
+            </div>
+
+            <div class="border-t border-slate-900 pt-4 flex flex-col gap-3">
+                <div class="bg-slate-900/50 rounded-xl p-3 border border-slate-800/40 flex items-center gap-3">
+                    <div class="relative">
+                        <div class="w-9 h-9 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-cyan-400 shadow-inner">OP</div>
+                        <span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-slate-950 animate-pulse"></span>
                     </div>
-                    <button onclick="openModal()" class="w-full lg:w-auto flex items-center justify-center space-x-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs md:text-sm font-bold shadow-md shadow-blue-500/10">
-                        <i class="fa-solid fa-plus"></i>
-                        <span>Novo Chamado</span>
+                    <div class="overflow-hidden">
+                        <p class="text-xs font-bold text-slate-200 truncate">Operador Geral</p>
+                        <p class="text-[10px] text-slate-400 truncate">Nível de Acesso Master</p>
+                    </div>
+                </div>
+                <p class="text-[10px] text-slate-500 text-center font-medium">&copy; 2026 Nuvem Corp. V3.2.0</p>
+            </div>
+        </aside>
+
+        <div class="flex flex-col flex-1 min-w-0 bg-slate-900/40 relative">
+            
+            <header class="h-16 bg-slate-950/60 backdrop-blur-md border-b border-slate-800/40 flex items-center justify-between px-4 lg:px-8 shrink-0 z-10 shadow-sm">
+                <div class="flex items-center gap-4">
+                    <button onclick="toggleMobileMenu()" class="lg:hidden text-slate-400 hover:text-slate-200 focus:outline-none p-1 rounded-lg hover:bg-slate-900/60 transition-colors">
+                        <i class="fa-solid fa-bars text-xl"></i>
+                    </button>
+                    <div>
+                        <h2 id="page-title" class="text-base font-bold text-white tracking-wide">Dashboard Operacional</h2>
+                        <p id="page-subtitle" class="text-[11px] text-slate-400 hidden sm:block">Métricas consolidadas e monitorização de SLA em tempo real</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <button onclick="syncData()" class="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 font-medium text-xs px-3 py-2 rounded-xl transition-all shadow-inner hover:border-slate-700">
+                        <i id="sync-icon" class="fa-solid fa-rotate text-cyan-400"></i> <span class="hidden sm:inline">Sincronizar Nuvem</span>
+                    </button>
+                    <button onclick="openModal()" class="flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-md shadow-cyan-500/10 tracking-wide transform active:scale-95">
+                        <i class="fa-solid fa-plus text-xs"></i> <span>Novo Chamado</span>
                     </button>
                 </div>
+            </header>
 
-                <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-                    <div class="overflow-x-auto w-full">
-                        <table class="w-full text-left border-collapse min-w-[900px]">
-                            <thead>
-                                <tr class="bg-slate-50 border-b border-gray-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                                    <th class="px-6 py-4">ID</th>
-                                    <th class="px-6 py-4">Prioridade</th>
-                                    <th class="px-6 py-4">Status</th>
-                                    <th class="px-6 py-4">Solicitante / Área</th>
-                                    <th class="px-6 py-4">Atendente</th>
-                                    <th class="px-6 py-4">Tipo</th>
-                                    <th class="px-6 py-4">Descrição</th>
-                                    <th class="px-6 py-4 text-right">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody id="chamados-table-body" class="divide-y divide-gray-100 text-sm">
-                                </tbody>
-                        </table>
-                    </div>
-                    <div id="empty-state" class="hidden py-16 text-center text-slate-400">
-                        <i class="fa-solid fa-inbox text-5xl mb-3 text-slate-200"></i>
-                        <p class="text-base font-medium text-slate-500">Nenhum chamado cadastrado.</p>
-                    </div>
-                </div>
-            </div>
-
-            <div id="tab-analytics" class="tab-content space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="bg-white p-4 md:p-6 rounded-xl border border-gray-200 shadow-sm">
-                        <h4 class="text-xs md:text-sm font-bold text-slate-700 mb-4 flex items-center space-x-2">
-                            <div class="w-1.5 h-5 bg-blue-500 rounded-full"></div>
-                            <span>Distribuição por Status</span>
-                        </h4>
-                        <div class="relative h-64 max-w-full">
-                            <canvas id="chartStatus"></canvas>
-                        </div>
-                    </div>
-                    <div class="bg-white p-4 md:p-6 rounded-xl border border-gray-200 shadow-sm">
-                        <h4 class="text-xs md:text-sm font-bold text-slate-700 mb-4 flex items-center space-x-2">
-                            <div class="w-1.5 h-5 bg-emerald-500 rounded-full"></div>
-                            <span>Carga por Atendente</span>
-                        </h4>
-                        <div class="relative h-64 max-w-full">
-                            <canvas id="chartAtendentes"></canvas>
-                        </div>
-                    </div>
-                </div>
-                <div class="bg-white p-4 md:p-6 rounded-xl border border-gray-200 shadow-sm">
-                    <h4 class="text-xs md:text-sm font-bold text-slate-700 mb-4 flex items-center space-x-2">
-                        <div class="w-1.5 h-5 bg-purple-500 rounded-full"></div>
-                        <span>Chamados por Área</span>
-                    </h4>
-                    <div id="area-ranking" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3"></div>
-                </div>
-            </div>
-
-            <div id="tab-vinc_manager" class="tab-content space-y-6">
-                <div class="bg-white p-4 md:p-6 rounded-xl border border-gray-200 shadow-sm">
-                    <h4 class="text-xs md:text-sm font-bold text-slate-700 mb-4 flex items-center space-x-2">
-                        <div class="w-1.5 h-5 bg-amber-500 rounded-full"></div>
-                        <span>Definir Vínculo Manualmente</span>
-                    </h4>
-                    <form id="vinc-manual-form" onsubmit="addVincManual(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Solicitante</label>
-                            <input type="text" id="vinc-solicitante" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs md:text-sm outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Área / Setor</label>
-                            <input type="text" id="vinc-area" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs md:text-sm outline-none font-semibold uppercase">
-                        </div>
-                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs md:text-sm font-bold py-2 shadow-md">
-                            Salvar Vínculo
-                        </button>
-                    </form>
-                </div>
-
-                <div class="bg-white p-4 md:p-6 rounded-xl border border-gray-200 shadow-sm">
-                    <div class="flex items-center justify-between mb-4">
-                        <h4 class="text-sm font-bold text-slate-800">Memória de Vínculos</h4>
-                        <button onclick="clearAllVinc()" class="text-xs font-bold text-rose-600 hover:bg-rose-50 px-2 py-1 rounded">Resetar Tudo</button>
-                    </div>
-                    <div class="max-h-80 overflow-y-auto border border-gray-200 rounded-xl">
-                        <table class="w-full text-left border-collapse text-xs md:text-sm">
-                            <thead class="bg-slate-50 sticky top-0 font-bold text-slate-500 border-b border-gray-200">
-                                <tr>
-                                    <th class="px-4 py-3">Solicitante</th>
-                                    <th class="px-4 py-3">Área</th>
-                                    <th class="px-4 py-3 text-right">Ação</th>
-                                </tr>
-                            </thead>
-                            <tbody id="vinc-table-body" class="divide-y divide-gray-100"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-    </main>
-
-    <div id="chamado-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden items-center justify-center z-50 p-3 opacity-0 transition-opacity duration-200">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-xl overflow-hidden max-h-[90vh] flex flex-col transform scale-95 transition-transform duration-200" id="modal-container">
-            <div class="bg-slate-800 px-4 py-4 flex items-center justify-between shrink-0">
-                <h3 id="modal-title" class="text-sm md:text-base font-bold text-white flex items-center">Novo Chamado</h3>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-white p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
-            </div>
-            
-            <form id="chamado-form" onsubmit="saveChamado(event)" class="p-4 md:p-6 space-y-4 overflow-y-auto flex-1 text-xs md:text-sm">
-                <input type="hidden" id="edit-index">
+            <main class="flex-1 overflow-y-auto p-4 lg:p-8 space-y-8">
                 
-                <div class="grid grid-cols-3 gap-3">
-                    <div>
-                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">ID *</label>
-                        <input type="text" id="modal-id" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 font-semibold outline-none">
+                <section id="tab-content-dashboard" class="tab-pane space-y-8 animate-fadeIn">
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="bg-gradient-to-br from-slate-950 to-slate-900/90 p-4 rounded-2xl border border-slate-800/50 shadow-xl relative overflow-hidden group">
+                            <div class="absolute -right-2 -bottom-2 text-slate-800/10 text-6xl font-black group-hover:text-slate-800/20 transition-all pointer-events-none select-none">TOT</div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-semibold tracking-wider text-slate-400 uppercase">Total Geral</span>
+                                <span class="bg-slate-900 border border-slate-800 text-slate-300 text-[10px] px-2 py-0.5 rounded-full font-bold">Histórico</span>
+                            </div>
+                            <div class="flex items-baseline gap-2">
+                                <span id="metric-total" class="text-2xl lg:text-3xl font-black tracking-tight text-white">0</span>
+                                <span class="text-[10px] text-slate-500 font-medium">registos</span>
+                            </div>
+                        </div>
+                        <div class="bg-gradient-to-br from-slate-950 to-slate-900/90 p-4 rounded-2xl border border-slate-800/50 shadow-xl relative overflow-hidden group">
+                            <div class="absolute -right-2 -bottom-2 text-amber-500/5 text-6xl font-black group-hover:text-amber-500/10 transition-all pointer-events-none select-none">OPN</div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-semibold tracking-wider text-amber-400 uppercase">Em Aberto</span>
+                                <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                            </div>
+                            <div class="flex items-baseline gap-2">
+                                <span id="metric-aberto" class="text-2xl lg:text-3xl font-black tracking-tight text-amber-400">0</span>
+                                <span class="text-[10px] text-slate-500 font-medium">pendentes</span>
+                            </div>
+                        </div>
+                        <div class="bg-gradient-to-br from-slate-950 to-slate-900/90 p-4 rounded-2xl border border-slate-800/50 shadow-xl relative overflow-hidden group">
+                            <div class="absolute -right-2 -bottom-2 text-cyan-500/5 text-6xl font-black group-hover:text-cyan-500/10 transition-all pointer-events-none select-none">PRG</div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-semibold tracking-wider text-cyan-400 uppercase">Em Atendimento</span>
+                                <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                            </div>
+                            <div class="flex items-baseline gap-2">
+                                <span id="metric-progresso" class="text-2xl lg:text-3xl font-black tracking-tight text-cyan-400">0</span>
+                                <span class="text-[10px] text-slate-500 font-medium">em curso</span>
+                            </div>
+                        </div>
+                        <div class="bg-gradient-to-br from-slate-950 to-slate-900/90 p-4 rounded-2xl border border-slate-800/50 shadow-xl relative overflow-hidden group">
+                            <div class="absolute -right-2 -bottom-2 text-emerald-500/5 text-6xl font-black group-hover:text-emerald-500/10 transition-all pointer-events-none select-none">DON</div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-semibold tracking-wider text-emerald-400 uppercase">Resolvidos</span>
+                                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            </div>
+                            <div class="flex items-baseline gap-2">
+                                <span id="metric-concluido" class="text-2xl lg:text-3xl font-black tracking-tight text-emerald-400">0</span>
+                                <span class="text-[10px] text-emerald-500/80 font-bold bg-emerald-500/5 px-1.5 py-0.5 rounded-md border border-emerald-500/10">SLA 100%</span>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Prioridade</label>
-                        <select id="modal-prioridade" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-2 outline-none">
-                            <option value="NORMAL">NORMAL</option>
-                            <option value="ALTA">ALTA</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Status</label>
-                        <select id="modal-status" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-2 outline-none">
-                            <option value="EM ATENDIMENTO">EM ATENDIMENTO</option>
-                            <option value="AGUARDANDO RETORNO">AGUARDANDO RETORNO</option>
-                            <option value="ATENDIMENTO PAUSADO">ATENDIMENTO PAUSADO</option>
-                        </select>
-                    </div>
-                </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Solicitante *</label>
-                        <input type="text" id="modal-solicitante" required oninput="autocompleteArea(this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 outline-none">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800/60 shadow-xl flex flex-col justify-between h-[340px]">
+                            <div class="mb-4">
+                                <h3 class="text-sm font-bold text-white tracking-wide">Distribuição por Status</h3>
+                                <p class="text-[11px] text-slate-400">Percentual volumétrico de carga operacional</p>
+                            </div>
+                            <div class="flex-1 relative flex items-center justify-center max-h-[240px]">
+                                <canvas id="chart-status"></canvas>
+                            </div>
+                        </div>
+                        <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800/60 shadow-xl flex flex-col justify-between h-[340px]">
+                            <div class="mb-4">
+                                <h3 class="text-sm font-bold text-white tracking-wide">Demandas por Área Solicitante</h3>
+                                <p class="text-[11px] text-slate-400">Métricas de consumo de suporte por departamento</p>
+                            </div>
+                            <div class="flex-1 relative flex items-center justify-center max-h-[240px]">
+                                <canvas id="chart-area"></canvas>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Área Solicitante *</label>
-                        <input type="text" id="modal-area" required class="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none bg-slate-50">
-                    </div>
-                </div>
+                </section>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Atendente *</label>
-                        <select id="modal-atendente" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 outline-none">
-                            <option value="Juliana Ordones">Juliana Ordones</option>
-                            <option value="Izabela Dobscha">Izabela Dobscha</option>
-                            <option value="Fernando Moura">Fernando Moura</option>
-                            <option value="Erica Hernandes">Erica Hernandes</option>
-                            <option value="Lívia Castro">Lívia Castro</option>
-                        </select>
+                <section id="tab-content-chamados" class="tab-pane space-y-6 hidden animate-fadeIn">
+                    <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800/60 shadow-xl flex flex-col md:flex-row gap-3 items-center justify-between">
+                        <div class="relative w-full md:w-80 group">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-cyan-400 text-xs transition-colors"></i>
+                            <input type="text" id="filter-search" oninput="applyFilters()" placeholder="Procurar por ID, Solicitante ou Atendente..." class="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-xs font-medium text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all shadow-inner">
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+                            <select id="filter-status" onchange="applyFilters()" class="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-semibold text-slate-300 focus:outline-none focus:border-cyan-500 min-w-[120px]">
+                                <option value="">Todos os Status</option>
+                                <option value="Aberto">Aberto</option>
+                                <option value="Em Atendimento">Em Atendimento</option>
+                                <option value="Concluído">Concluído</option>
+                            </select>
+                            <select id="filter-prioridade" onchange="applyFilters()" class="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-semibold text-slate-300 focus:outline-none focus:border-cyan-500 min-w-[120px]">
+                                <option value="">Todas Prioridades</option>
+                                <option value="Baixa">Baixa</option>
+                                <option value="Média">Média</option>
+                                <option value="Alta">Alta</option>
+                                <option value="Crítica">Crítica</option>
+                            </select>
+                            <button onclick="clearFilters()" class="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-slate-200 p-2 rounded-xl text-xs font-bold transition-all shadow-sm" title="Limpar Filtros">
+                                <i class="fa-solid fa-filter-circle-xmark"></i>
+                            </button>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tipo de Doc</label>
-                        <input type="text" id="modal-tipo" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 outline-none">
-                    </div>
-                </div>
 
+                    <div class="bg-slate-950 rounded-2xl border border-slate-800/60 shadow-2xl overflow-hidden">
+                        <div class="overflow-x-auto w-full">
+                            <table class="w-full text-left border-collapse table-auto">
+                                <thead>
+                                    <tr class="bg-slate-900/70 border-b border-slate-800/60 text-[11px] font-bold text-slate-400 tracking-wider uppercase select-none">
+                                        <th class="py-3 px-4 text-center w-20">ID</th>
+                                        <th class="py-3 px-4 w-28">Prioridade</th>
+                                        <th class="py-3 px-4 w-36">Status</th>
+                                        <th class="py-3 px-4">Solicitante / Área</th>
+                                        <th class="py-3 px-4">Atendente / Tipo</th>
+                                        <th class="py-3 px-4">Descrição Resumida</th>
+                                        <th class="py-3 px-4 text-center w-24">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-body-chamados" class="divide-y divide-slate-900 text-xs font-medium text-slate-300">
+                                    </tbody>
+                            </table>
+                        </div>
+                        <div id="table-empty-state" class="hidden p-12 text-center flex flex-col items-center justify-center gap-3">
+                            <div class="w-12 h-12 rounded-full bg-slate-900 flex items-center justify-center text-slate-600 border border-slate-800/60"><i class="fa-solid fa-folder-open text-lg"></i></div>
+                            <div>
+                                <p class="text-sm font-bold text-slate-400">Nenhum chamado localizado</p>
+                                <p class="text-[11px] text-slate-600">Altere os critérios de pesquisa ou adicione um novo registo na base de dados.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="tab-content-configuracoes" class="tab-pane space-y-6 hidden animate-fadeIn">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800/60 shadow-xl flex flex-col gap-4">
+                            <div>
+                                <h3 class="text-sm font-bold text-white tracking-wide">Persistência e Backup de Dados</h3>
+                                <p class="text-[11px] text-slate-400">Exportação total do histórico ou carga massiva de chamados</p>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                                <button onclick="exportToExcel()" class="flex items-center justify-center gap-2 bg-slate-900 hover:bg-emerald-950/40 border border-slate-800 hover:border-emerald-800/50 text-slate-300 hover:text-emerald-400 font-bold text-xs p-3 rounded-xl transition-all shadow-md group">
+                                    <i class="fa-solid fa-file-excel text-sm text-emerald-500 group-hover:scale-110 transition-transform"></i> Exportar Histórico (Excel)
+                                </button>
+                                <label class="flex items-center justify-center gap-2 bg-slate-900 hover:bg-blue-950/40 border border-slate-800 hover:border-blue-800/50 text-slate-300 hover:text-blue-400 font-bold text-xs p-3 rounded-xl transition-all shadow-md cursor-pointer group">
+                                    <i class="fa-solid fa-file-import text-sm text-blue-500 group-hover:scale-110 transition-transform"></i> Sincronizar Excel à Nuvem
+                                    <input type="file" id="excel-import" accept=".xlsx, .xls" class="hidden">
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800/60 shadow-xl flex flex-col gap-4">
+                            <div>
+                                <h3 class="text-sm font-bold text-white tracking-wide">Controlo de Infraestrutura Global</h3>
+                                <p class="text-[11px] text-slate-400">Ativação de banners de contingência para incidentes massivos</p>
+                            </div>
+                            <div class="flex items-center justify-between bg-slate-900/50 p-3 rounded-xl border border-slate-800/40 mt-1">
+                                <div>
+                                    <p class="text-xs font-bold text-slate-200">Banner de Incidente Geral</p>
+                                    <p class="text-[10px] text-slate-500">Exibe um alerta fixo no topo para todos os utilizadores do painel.</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer select-none">
+                                    <input type="checkbox" id="toggle-global-alert" onchange="toggleGlobalAlertBanner(this.checked)" class="sr-only peer">
+                                    <div class="w-9 h-5 bg-slate-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-600 peer-checked:after:bg-white peer-checked:after:border-transparent"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+
+        <div id="mobile-sidebar" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-40 hidden transition-opacity duration-300 opacity-0">
+            <div class="w-72 bg-slate-950 h-full p-5 flex flex-col justify-between transform -translate-x-full transition-transform duration-300 shadow-2xl border-r border-slate-800/60" onclick="event.stopPropagation()">
+                <div class="flex flex-col gap-6">
+                    <div class="flex items-center justify-between border-b border-slate-900 pb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="bg-gradient-to-tr from-cyan-500 to-blue-600 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fa-solid fa-headset text-white text-sm"></i></div>
+                            <h1 class="text-sm font-black tracking-wider text-white">NUVEM HELPDESK</h1>
+                        </div>
+                        <button onclick="toggleMobileMenu()" class="text-slate-400 hover:text-slate-200 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+                    </div>
+                    <nav class="flex flex-col gap-1">
+                        <button onclick="switchTab('dashboard'); toggleMobileMenu()" id="btn-tab-dashboard-mobile" class="mobile-nav-btn active flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-xs text-cyan-400 bg-slate-900">
+                            <i class="fa-solid fa-chart-pie text-base w-5 text-center"></i> Dashboard Operacional
+                        </button>
+                        <button onclick="switchTab('chamados'); toggleMobileMenu()" id="btn-tab-chamados-mobile" class="mobile-nav-btn flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-xs text-slate-400">
+                            <i class="fa-solid fa-list-check text-base w-5 text-center"></i> Gestão de Chamados
+                        </button>
+                        <button onclick="switchTab('configuracoes'); toggleMobileMenu()" id="btn-tab-configuracoes-mobile" class="mobile-nav-btn flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-xs text-slate-400">
+                            <i class="fa-solid fa-sliders text-base w-5 text-center"></i> Configurações & Infra
+                        </button>
+                    </nav>
+                </div>
+                <div class="border-t border-slate-900 pt-4 flex flex-col gap-3">
+                    <label class="flex items-center justify-center gap-2 bg-slate-900 border border-slate-800 text-slate-400 font-bold text-[11px] p-2.5 rounded-xl cursor-pointer">
+                        <i class="fa-solid fa-file-import text-blue-500"></i> Importar Excel Móvel
+                        <input type="file" id="excel-import-mobile" accept=".xlsx, .xls" class="hidden">
+                    </label>
+                    <p class="text-[9px] text-slate-600 text-center font-medium">&copy; 2026 Nuvem Corp.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-chamado" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
+        <div class="bg-slate-900 border border-slate-800/80 w-full max-w-lg rounded-2xl shadow-2xl flex flex-col my-auto transform transition-all scale-95 duration-200" onclick="event.stopPropagation()">
+            <div class="bg-slate-950 px-5 py-4 border-b border-slate-800/60 rounded-t-2xl flex items-center justify-between">
                 <div>
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Descrição</label>
-                    <textarea id="modal-descricao" rows="2" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 outline-none"></textarea>
+                    <h3 id="modal-title" class="text-sm font-bold text-white tracking-wide">Abertura de Chamado Técnico</h3>
+                    <p class="text-[10px] text-slate-400">Insira as informações mandatórias na malha de dados</p>
+                </div>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-900 transition-colors focus:outline-none"><i class="fa-solid fa-xmark text-base"></i></button>
+            </div>
+
+            <form id="form-chamado" onsubmit="saveChamado(event)" class="p-5 space-y-4 text-xs font-semibold text-slate-300">
+                <input type="hidden" id="chamado-id">
+                
+                <div class="bg-slate-950/60 border border-dashed border-cyan-500/30 p-3 rounded-xl flex flex-col gap-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] text-cyan-400 font-bold tracking-wide uppercase flex items-center gap-1.5">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Entrada Inteligente de Dados
+                        </span>
+                        <button type="button" onclick="toggleMagicPasteBox()" class="text-[10px] bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 px-2 py-1 rounded-lg border border-cyan-500/20 transition-all font-bold">
+                            ✨ Colagem Mágica
+                        </button>
+                    </div>
+                    <div id="magic-paste-container" class="hidden flex flex-col gap-2 mt-1 animate-fadeIn">
+                        <textarea id="magic-paste-text" rows="3" placeholder="Cole aqui o texto bruto (Ex: Solicitante: João | Área: TI | Atendente: Carlos...)" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-[11px] font-medium text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500 transition-all"></textarea>
+                        <button type="button" onclick="processMagicPaste()" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-[11px] py-1.5 rounded-lg shadow-sm transition-all uppercase tracking-wider">
+                            Processar e Preencher Campos
+                        </button>
+                    </div>
                 </div>
 
-                <div class="flex justify-end space-x-2 pt-3 border-t border-slate-100 shrink-0">
-                    <button type="button" onclick="closeModal()" class="px-4 py-2 border rounded-lg font-bold text-slate-600 bg-white">Cancelar</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold shadow-md">Salvar</button>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="flex flex-col gap-1.5">
+                        <label for="chamado-solicitante" class="text-[11px] tracking-wide text-slate-400 uppercase">Nome do Solicitante <span class="text-red-500">*</span></label>
+                        <input type="text" id="chamado-solicitante" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200 placeholder-slate-700 focus:outline-none focus:border-cyan-500 transition-all">
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <label for="chamado-area" class="text-[11px] tracking-wide text-slate-400 uppercase">Área do Solicitante <span class="text-red-500">*</span></label>
+                        <input type="text" id="chamado-area" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200 placeholder-slate-700 focus:outline-none focus:border-cyan-500 transition-all">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="flex flex-col gap-1.5">
+                        <label for="chamado-atendente" class="text-[11px] tracking-wide text-slate-400 uppercase">Atendente Alocado <span class="text-red-500">*</span></label>
+                        <input type="text" id="chamado-atendente" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200 placeholder-slate-700 focus:outline-none focus:border-cyan-500 transition-all">
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <label for="chamado-tipo" class="text-[11px] tracking-wide text-slate-400 uppercase">Tipo de Incidente <span class="text-red-500">*</span></label>
+                        <select id="chamado-tipo" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-300 focus:outline-none focus:border-cyan-500 transition-all font-semibold">
+                            <option value="Suporte">Suporte Geral</option>
+                            <option value="Dúvida">Dúvida Operacional</option>
+                            <option value="Ajuste">Ajuste de Sistema</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="flex flex-col gap-1.5">
+                        <label for="chamado-status" class="text-[11px] tracking-wide text-slate-400 uppercase">Status Inicial</label>
+                        <select id="chamado-status" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-300 focus:outline-none focus:border-cyan-500 transition-all font-semibold">
+                            <option value="Aberto">Aberto</option>
+                            <option value="Em Atendimento">Em Atendimento</option>
+                            <option value="Concluído">Concluído</option>
+                        </select>
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <label for="chamado-prioridade" class="text-[11px] tracking-wide text-slate-400 uppercase">Nível de Severidade (Prioridade)</label>
+                        <select id="chamado-prioridade" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-300 focus:outline-none focus:border-cyan-500 transition-all font-semibold">
+                            <option value="Baixa">Baixa (Rotina)</option>
+                            <option value="Média">Média (SLA Padrão)</option>
+                            <option value="Alta">Alta (Urgência)</option>
+                            <option value="Crítica">Crítica (SLA Reduzido)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-1.5">
+                    <label for="chamado-descricao" class="text-[11px] tracking-wide text-slate-400 uppercase">Descrição Detalhada do Chamado <span class="text-red-500">*</span></label>
+                    <textarea id="chamado-descricao" required rows="3" placeholder="Forneça detalhes técnicos claros da ocorrência..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200 placeholder-slate-700 focus:outline-none focus:border-cyan-500 transition-all font-medium resize-none"></textarea>
+                </div>
+
+                <div class="border-t border-slate-800/60 pt-4 flex items-center justify-end gap-2 bg-slate-900 rounded-b-2xl">
+                    <button type="button" onclick="closeModal()" class="bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-slate-200 font-bold px-4 py-2.5 rounded-xl transition-all">Cancelar</button>
+                    <button type="submit" class="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-cyan-500/10 tracking-wide">Salvar Registo</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <div id="toast-container"></div>
-
     <script>
-        // ================= INTELIGÊNCIA FIREBASE (CONEXÃO REAL) =================
-        const firebaseConfig = {
-            apiKey: "AIzaSyBt_VaPxN243oEKpV4cgQj_WoAy98L45KY",
-            authDomain: "painel-chamados-sm-bd.firebaseapp.com",
-            databaseURL: "https://painel-chamados-sm-bd-default-rtdb.firebaseio.com",
-            projectId: "painel-chamados-sm-bd",
-            storageBucket: "painel-chamados-sm-bd.firebasestorage.app",
-            messagingSenderId: "526976866320",
-            appId: "1:526976866320:web:508cc1c55becbf7d989295",
-            measurementId: "G-2HFKK1ZW72"
-        };
-
-        // Inicializa o Firebase de forma segura
-        try {
-            firebase.initializeApp(firebaseConfig);
-        } catch (error) {
-            console.error("Erro ao inicializar o Firebase:", error);
-        }
-        
-        const db = firebase.firestore();
-
         let chamados = [];
-        let vinculacaoArea = {};
-        let instChartStatus = null;
-        let instChartAtendentes = null;
-        
-        // Memória para armazenar o último chamado deletado para o Ctrl + Z
-        let ultimoChamadoExcluido = null;
+        let filteredChamados = [];
+        let chartStatusInstance = null;
+        let chartAreaInstance = null;
 
-        // OUVINTE EM TEMPO REAL: Atualização instantânea na nuvem
-        db.collection("chamados").onSnapshot((snapshot) => {
-            chamados = [];
-            snapshot.forEach((doc) => {
-                chamados.push(doc.data());
-            });
-            renderTable();
-            if(document.getElementById('tab-analytics').classList.contains('active')) buildCharts();
-        }, (error) => {
-            console.error("Erro ao carregar chamados:", error);
-            showToast("Erro ao sincronizar chamados em tempo real.", "error");
+        // INICIALIZAÇÃO DO ECOSSISTEMA
+        window.addEventListener('DOMContentLoaded', () => {
+            initFirebaseListener();
+            document.getElementById('toggle-global-alert').checked = false;
         });
 
-        db.collection("vinculos").onSnapshot((snapshot) => {
-            vinculacaoArea = {};
-            snapshot.forEach((doc) => {
-                vinculacaoArea[doc.id] = doc.data().area;
-            });
-            if(document.getElementById('tab-vinc_manager').classList.contains('active')) renderVincTable();
-        }, (error) => {
-            console.error("Erro ao carregar vínculos:", error);
-        });
-
-        // Configuração de Data e Visual
-        document.getElementById('data-hoje').innerText = new Date().toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-
-        // Controle do Menu no Celular
-        function toggleMobileSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const backdrop = document.getElementById('sidebar-backdrop');
-            const icon = document.getElementById('menu-icon');
-            
-            if(sidebar.classList.contains('-translate-x-full')) {
-                sidebar.classList.remove('-translate-x-full');
-                backdrop.classList.remove('hidden');
-                icon.className = "fa-solid fa-xmark text-xl";
-            } else {
-                sidebar.classList.add('-translate-x-full');
-                backdrop.classList.add('hidden');
-                icon.className = "fa-solid fa-bars text-xl";
-            }
-        }
-
+        // TOAST ENGINE CONTROLLER
         function showToast(message, type = 'success') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
-            let bgClass = type === 'error' ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800';
-            let iconClass = type === 'error' ? 'fa-solid fa-circle-xmark text-rose-500' : 'fa-solid fa-circle-check text-emerald-500';
+            toast.className = `flex items-center gap-3 px-4 py-3 rounded-xl border font-semibold text-xs shadow-2xl transition-all duration-300 transform translate-y-2 opacity-0 pointer-events-auto bg-slate-950 max-w-sm border-slate-800`;
+            
+            let icon = '<i class="fa-solid fa-circle-check text-emerald-500 text-sm"></i>';
+            if(type === 'error') icon = '<i class="fa-solid fa-circle-exclamation text-red-500 text-sm"></i>';
+            if(type === 'warning') icon = '<i class="fa-solid fa-triangle-exclamation text-amber-500 text-sm"></i>';
 
-            toast.className = `toast border flex items-center p-3 rounded-xl shadow-lg font-medium text-xs md:text-sm bg-white ${bgClass}`;
-            toast.innerHTML = `<i class="${iconClass} text-base mr-2"></i><span>${message}</span>`;
+            toast.innerHTML = `${icon} <span class="text-slate-200 leading-snug">${message}</span>`;
             container.appendChild(toast);
-            setTimeout(() => { toast.classList.add('hide'); setTimeout(() => toast.remove(), 300); }, 3000);
+
+            setTimeout(() => { toast.classList.remove('translate-y-2', 'opacity-0'); }, 10);
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-1');
+                setTimeout(() => { toast.remove(); }, 300);
+            }, 4000);
         }
 
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.sidebar-btn').forEach(el => {
-                el.classList.remove('bg-blue-50/80', 'border-blue-600', 'text-blue-700');
-                el.classList.add('border-transparent', 'text-slate-500');
+        // ALTERNADOR DE SECCÕES (TABS)
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-pane').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-content-${tabId}`).classList.remove('hidden');
+
+            document.querySelectorAll('.nav-btn, .mobile-nav-btn').forEach(btn => {
+                btn.classList.remove('active', 'text-cyan-400', 'bg-gradient-to-r', 'from-cyan-500/10', 'to-transparent', 'border-cyan-500', 'bg-slate-900');
+                btn.classList.add('text-slate-400', 'border-transparent');
             });
 
-            document.getElementById(`tab-${tabName}`).classList.add('active');
-            document.getElementById(`tab-${tabName}-btn`).classList.add('bg-blue-50/80', 'border-blue-600', 'text-blue-700');
+            const desktopBtn = document.getElementById(`btn-tab-${tabId}`);
+            const mobileBtn = document.getElementById(`btn-tab-${tabId}-mobile`);
             
-            if (tabName === 'analytics') buildCharts();
-            if (tabName === 'vinc_manager') renderVincTable();
-            
-            // Fecha a barra lateral se estiver no celular
-            if(window.innerWidth < 768) toggleMobileSidebar();
+            [desktopBtn, mobileBtn].forEach(btn => {
+                if(btn) {
+                    btn.classList.add('active', 'text-cyan-400');
+                    btn.classList.remove('text-slate-400', 'border-transparent');
+                    if(btn.classList.contains('nav-btn')) {
+                        btn.classList.add('bg-gradient-to-r', 'from-cyan-500/10', 'to-transparent', 'border-cyan-500');
+                    } else {
+                        btn.classList.add('bg-slate-900');
+                    }
+                }
+            });
+
+            const titles = { 'dashboard': 'Dashboard Operacional', 'chamados': 'Gestão de Chamados', 'configuracoes': 'Configurações & Infra' };
+            const subtitles = { 'dashboard': 'Métricas consolidadas e monitorização de SLA em tempo real', 'chamados': 'Filtragem avançada, edição e tratamento de incidentes', 'configuracoes': 'Ferramentas de backup, importação e controlos do sistema' };
+            document.getElementById('page-title').innerText = titles[tabId];
+            document.getElementById('page-subtitle').innerText = subtitles[tabId];
         }
 
-        function autocompleteArea(nome) {
-            const areaInput = document.getElementById('modal-area');
-            const nomeFormatado = nome.trim();
-            if (vinculacaoArea[nomeFormatado]) {
-                areaInput.value = vinculacaoArea[nomeFormatado];
-                areaInput.className = "w-full border rounded-lg px-3 py-2 text-xs md:text-sm outline-none bg-blue-50 text-blue-700 border-blue-300 font-bold";
+        // MENU MOBILE CONTROL
+        function toggleMobileMenu() {
+            const sidebar = document.getElementById('mobile-sidebar');
+            if(sidebar.classList.contains('hidden')) {
+                sidebar.classList.remove('hidden');
+                setTimeout(() => {
+                    sidebar.classList.remove('opacity-0');
+                    sidebar.firstElementChild.classList.remove('-translate-x-full');
+                }, 10);
             } else {
-                areaInput.value = '';
-                areaInput.className = "w-full border border-slate-200 rounded-lg px-3 py-2 text-xs md:text-sm outline-none bg-slate-50";
+                sidebar.classList.add('opacity-0');
+                sidebar.firstElementChild.classList.add('-translate-x-full');
+                setTimeout(() => { sidebar.classList.add('hidden'); }, 300);
             }
         }
 
-        function addVincManual(e) {
-            e.preventDefault();
-            const sol = document.getElementById('vinc-solicitante').value.trim();
-            const area = document.getElementById('vinc-area').value.trim().toUpperCase();
-            
-            if(!sol || !area) return;
+        // BANNER DE ALERTA GLOBAL CONTROL
+        function toggleGlobalAlertBanner(isVisible) {
+            const banner = document.getElementById('global-alert-banner');
+            banner.className = isVisible ? 'bg-gradient-to-r from-red-600 via-amber-600 to-red-600 text-white text-center py-2 px-4 font-bold text-sm tracking-wide animate-pulse shadow-lg flex items-center justify-center gap-2 border-b border-red-500/20' : 'hidden';
+        }
 
-            db.collection("vinculos").doc(sol).set({ area: area }).then(() => {
-                document.getElementById('vinc-manual-form').reset();
-                showToast('Novo vínculo salvo na nuvem!');
-            }).catch(err => {
-                showToast('Erro ao salvar vínculo.', 'error');
-                console.error(err);
+        // ENTRADA DA FUNÇÃO DE COLAGEM MÁGICA
+        function toggleMagicPasteBox() {
+            const container = document.getElementById('magic-paste-container');
+            container.classList.toggle('hidden');
+        }
+
+        function processMagicPaste() {
+            const text = document.getElementById('magic-paste-text').value;
+            if(!text.trim()) { showToast('Escreva ou cole algum texto primeiro.', 'warning'); return; }
+
+            // Expressões regulares para captura inteligente de campos chave
+            const regexes = {
+                solicitante: /(?:solicitante|nome|quem|cliente)\s*:\s*([^\n|]+)/i,
+                area: /(?:área|area|setor|depto|departamento)\s*:\s*([^\n|]+)/i,
+                atendente: /(?:atendente|responsável|tecnico|técnico|por)\s*:\s*([^\n|]+)/i,
+                tipo: /(?:tipo|categoria)\s*:\s*(Suporte|Dúvida|Ajuste|[^\n|]+)/i,
+                status: /(?:status|situação)\s*:\s*(Aberto|Em Atendimento|Concluído|[^\n|]+)/i,
+                prioridade: /(?:prioridade|severidade|urgência)\s*:\s*(Baixa|Média|Alta|Crítica|[^\n|]+)/i,
+                descricao: /(?:descrição|descricao|problema|assunto)\s*:\s*([\s\S]+)/i
+            };
+
+            // Função auxiliar de limpeza de texto capturado
+            const extract = (regex) => {
+                const match = text.match(regex);
+                return match ? match[1].trim() : '';
+            };
+
+            const data = {
+                solicitante: extract(regexes.solicitante),
+                area: extract(regexes.area),
+                atendente: extract(regexes.atendente),
+                tipo: extract(regexes.tipo),
+                status: extract(regexes.status),
+                prioridade: extract(regexes.prioridade),
+                descricao: extract(regexes.descricao)
+            };
+
+            // Preenchimento dos inputs baseados na captura
+            if(data.solicitante) document.getElementById('chamado-solicitante').value = data.solicitante;
+            if(data.area) document.getElementById('chamado-area').value = data.area;
+            if(data.atendente) document.getElementById('chamado-atendente').value = data.atendente;
+            if(data.descricao) document.getElementById('chamado-descricao').value = data.descricao;
+
+            // Tratamento especial para inputs do tipo select (comboboxes)
+            const matchSelect = (id, val) => {
+                const select = document.getElementById(id);
+                for(let opt of select.options) {
+                    if(opt.value.toLowerCase() === val.toLowerCase() || opt.text.toLowerCase().includes(val.toLowerCase())) {
+                        select.value = opt.value;
+                        break;
+                    }
+                }
+            };
+
+            if(data.tipo) matchSelect('chamado-tipo', data.tipo);
+            if(data.status) matchSelect('chamado-status', data.status);
+            if(data.prioridade) matchSelect('chamado-prioridade', data.prioridade);
+
+            showToast('Processamento concluído pela Colagem Mágica!');
+        }
+
+        // FIREBASE SYNC ENGINE (REALTIME CAPTURE)
+        function initFirebaseListener() {
+            db.collection("chamados").onSnapshot(snapshot => {
+                chamados = [];
+                snapshot.forEach(doc => {
+                    let d = doc.data();
+                    d.id = doc.id;
+                    chamados.push(d);
+                });
+                applyFilters();
+                showToast("Base de dados sincronizada com o Firestore.");
+            }, error => {
+                console.error("Erro na escuta Firestore: ", error);
+                showToast("Falha na sincronização automatizada.", "error");
             });
+        }
+
+        function syncData() {
+            const icon = document.getElementById('sync-icon');
+            icon.classList.add('animate-spin');
+            setTimeout(() => { icon.classList.remove('animate-spin'); showToast("Sincronização manual executada com sucesso."); }, 800);
+        }
+
+        // ENGINE DE FILTRAGEM E RENDERIZAÇÃO
+        function applyFilters() {
+            const search = document.getElementById('filter-search').value.toLowerCase();
+            const status = document.getElementById('filter-status').value;
+            const prioridade = document.getElementById('filter-prioridade').value;
+
+            filteredChamados = chamados.filter(c => {
+                const matchSearch = !search || String(c.id).toLowerCase().includes(search) || 
+                                    (c.solicitante && c.solicitante.toLowerCase().includes(search)) ||
+                                    (c.atendente && c.atendente.toLowerCase().includes(search));
+                const matchStatus = !status || c.status === status;
+                const matchPrioridade = !prioridade || c.prioridade === prioridade;
+                return matchSearch && matchStatus && matchPrioridade;
+            });
+
+            renderTable();
+            renderMetricsAndCharts();
+        }
+
+        function clearFilters() {
+            document.getElementById('filter-search').value = '';
+            document.getElementById('filter-status').value = '';
+            document.getElementById('filter-prioridade').value = '';
+            applyFilters();
+            showToast('Filtros de pesquisa redefinidos.');
         }
 
         function renderTable() {
-            const body = document.getElementById('chamados-table-body');
-            const emptyState = document.getElementById('empty-state');
-            const search = document.getElementById('search-input').value.toLowerCase();
-            const filterStatus = document.getElementById('filter-status').value;
-            const filterPriority = document.getElementById('filter-priority').value;
+            const tbody = document.getElementById('table-body-chamados');
+            const emptyState = document.getElementById('table-empty-state');
+            tbody.innerHTML = '';
 
-            body.innerHTML = '';
-
-            let filtered = chamados.filter(item => {
-                const matchSearch = !search || 
-                    (item.id && item.id.toString().toLowerCase().includes(search)) || 
-                    (item.solicitante && item.solicitante.toLowerCase().includes(search)) || 
-                    (item.atendente && item.atendente.toLowerCase().includes(search)) || 
-                    (item.descricao && item.descricao.toLowerCase().includes(search));
-                const matchStatus = !filterStatus || item.status === filterStatus;
-                const matchPriority = !filterPriority || item.prioridade === filterPriority;
-                return matchSearch && matchStatus && matchPriority;
-            });
-
-            document.getElementById('stat-atendimento').innerText = chamados.filter(c => c.status === 'EM ATENDIMENTO').length;
-            document.getElementById('stat-retorno').innerText = chamados.filter(c => c.status === 'AGUARDANDO RETORNO').length;
-            document.getElementById('stat-pausado').innerText = chamados.filter(c => c.status === 'ATENDIMENTO PAUSADO').length;
-            document.getElementById('stat-total').innerText = chamados.length;
-
-            if(filtered.length === 0) { emptyState.classList.remove('hidden'); return; }
+            if(filteredChamados.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            }
             emptyState.classList.add('hidden');
 
-            filtered.forEach((item) => {
-                let statusClass = item.status === 'EM ATENDIMENTO' ? 'bg-blue-100 text-blue-800' : item.status === 'AGUARDANDO RETORNO' ? 'bg-amber-100 text-amber-800' : 'bg-purple-100 text-purple-800';
-                let prioClass = item.prioridade === 'ALTA' ? 'bg-rose-100 text-rose-800 font-bold' : 'bg-slate-100 text-slate-600';
+            filteredChamados.forEach(c => {
+                let badgeStatus = '', badgePrio = '';
+                
+                if(c.status === 'Aberto') badgeStatus = 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
+                else if(c.status === 'Em Atendimento') badgeStatus = 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20';
+                else badgeStatus = 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+
+                if(c.prioridade === 'Baixa') badgePrio = 'bg-slate-800 text-slate-400';
+                else if(c.prioridade === 'Média') badgePrio = 'bg-blue-500/20 text-blue-400';
+                else if(c.prioridade === 'Alta') badgePrio = 'bg-amber-500/20 text-amber-500';
+                else badgePrio = 'bg-red-500/20 text-red-400 border border-red-500/30';
 
                 const tr = document.createElement('tr');
-                tr.className = "table-row-hover bg-white";
+                tr.className = 'hover:bg-slate-900/40 transition-colors border-b border-slate-900/60 align-middle';
                 tr.innerHTML = `
-                    <td class="px-6 py-4 font-mono font-bold text-slate-800">#${item.id}</td>
-                    <td class="px-6 py-4"><span class="px-2.5 py-0.5 rounded text-[11px] ${prioClass}">${item.prioridade}</span></td>
-                    <td class="px-6 py-4"><span class="px-2.5 py-0.5 rounded text-[11px] font-bold ${statusClass}">${item.status}</span></td>
-                    <td class="px-6 py-4">
-                        <div class="font-bold text-slate-800">${item.solicitante}</div>
-                        <div class="text-[11px] text-blue-600 font-bold uppercase mt-0.5">${item.area}</div>
-                    </td>
-                    <td class="px-6 py-4 font-medium text-slate-600">${item.atendente}</td>
-                    <td class="px-6 py-4"><span class="bg-slate-50 text-slate-700 text-xs px-2 py-0.5 rounded font-mono border">${item.tipo || 'N/A'}</span></td>
-                    <td class="px-6 py-4 text-xs max-w-[180px] truncate text-slate-400">${item.descricao || '-'}</td>
-                    <td class="px-6 py-4 text-right space-x-1 whitespace-nowrap">
-                        <button onclick="editChamado('${item.id}')" class="text-blue-500 bg-blue-50 p-2 rounded-lg"><i class="fa-solid fa-pen-to-square"></i></button>
-                        <button onclick="deleteChamado('${item.id}')" class="text-rose-500 bg-rose-50 p-2 rounded-lg"><i class="fa-solid fa-trash-can"></i></button>
-                    </td>
-                `;
-                body.appendChild(tr);
-            });
-        }
-
-        function openModal(id = null) {
-            const form = document.getElementById('chamado-form');
-            form.reset();
-            document.getElementById('edit-index').value = '';
-            document.getElementById('modal-id').disabled = false;
-            autocompleteArea('');
-
-            if(id) {
-                const item = chamados.find(c => c.id.toString() === id.toString());
-                if(item) {
-                    document.getElementById('edit-index').value = item.id;
-                    document.getElementById('modal-id').value = item.id;
-                    document.getElementById('modal-id').disabled = true;
-                    document.getElementById('modal-prioridade').value = item.prioridade;
-                    document.getElementById('modal-status').value = item.status;
-                    document.getElementById('modal-solicitante').value = item.solicitante;
-                    document.getElementById('modal-area').value = item.area;
-                    document.getElementById('modal-atendente').value = item.atendente;
-                    document.getElementById('modal-tipo').value = item.tipo || '';
-                    document.getElementById('modal-descricao').value = item.descricao || '';
-                    autocompleteArea(item.solicitante);
-                }
-            }
-
-            const modal = document.getElementById('chamado-modal');
-            const container = document.getElementById('modal-container');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            setTimeout(() => { modal.classList.remove('opacity-0'); container.classList.add('scale-100'); }, 10);
-        }
-
-        function closeModal() {
-            const modal = document.getElementById('chamado-modal');
-            const container = document.getElementById('modal-container');
-            modal.classList.add('opacity-0');
-            container.classList.remove('scale-100');
-            setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('flex'); }, 200);
-        }
-
-        function saveChamado(e) {
-            e.preventDefault();
-            const editId = document.getElementById('edit-index').value;
-            const id = document.getElementById('modal-id').value.trim();
-            const solicitante = document.getElementById('modal-solicitante').value.trim();
-            const area = document.getElementById('modal-area').value.trim().toUpperCase();
-            
-            const itemData = {
-                id: id,
-                prioridade: document.getElementById('modal-prioridade').value,
-                status: document.getElementById('modal-status').value,
-                solicitante: solicitante,
-                area: area,
-                atendente: document.getElementById('modal-atendente').value,
-                tipo: document.getElementById('modal-tipo').value.trim(),
-                descricao: document.getElementById('modal-descricao').value.trim(),
-                ultima_mod: new Date().toISOString().split('T')[0]
-            };
-
-            if (solicitante && area) {
-                db.collection("vinculos").doc(solicitante).set({ area: area }).catch(err => console.error("Erro ao salvar vinculo implícito:", err));
-            }
-
-            if(!editId && chamados.some(c => c.id.toString() === id.toString())) {
-                showToast('Erro: Este ID já existe!', 'error');
-                return;
-            }
-
-            if(!editId) itemData.data_criacao = new Date().toISOString().split('T')[0];
-
-            db.collection("chamados").doc(id).set(itemData, { merge: true }).then(() => {
-                showToast(`Chamado #${id} salvo na nuvem.`);
-                closeModal();
-            }).catch(err => {
-                showToast('Erro ao salvar o chamado na nuvem.', 'error');
-                console.error(err);
-            });
-        }
-
-        function editChamado(id) { openModal(id); }
-        
-        function deleteChamado(id) {
-            if(confirm(`Excluir chamado #${id} da nuvem?`)) {
-                // Captura e faz backup do chamado antes de excluí-lo da nuvem
-                const backup = chamados.find(c => c.id.toString() === id.toString());
-                if (backup) {
-                    ultimoChamadoExcluido = { ...backup };
-                }
-
-                db.collection("chamados").doc(id).delete().then(() => {
-                    showToast('Chamado removido! Pressione Ctrl + Z para desfazer.', 'error');
-                }).catch(err => {
-                    showToast('Erro ao excluir chamado.', 'error');
-                    console.error(err);
-                });
-            }
-        }
-
-        // Ouvinte global para monitorar o comando Ctrl + Z
-        document.addEventListener('keydown', function(event) {
-            // Verifica se as teclas Ctrl + Z (ou Cmd + Z no Mac) foram acionadas juntas
-            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
-                if (ultimoChamadoExcluido) {
-                    event.preventDefault(); // Impede efeitos nativos do navegador
-                    
-                    const itemRestaurar = { ...ultimoChamadoExcluido };
-                    const id = itemRestaurar.id;
-                    
-                    // Insere novamente o item no Firestore da Nuvem
-                    db.collection("chamados").doc(id).set(itemRestaurar)
-                        .then(() => {
-                            showToast(`Exclusão desfeita! Chamado #${id} restaurado.`);
-                            ultimoChamadoExcluido = null; // Esvazia para evitar restaurações repetidas por acidente
-                        })
-                        .catch(err => {
-                            showToast('Não foi possível restaurar o chamado.', 'error');
-                            console.error(err);
-                        });
-                }
-            }
-        });
-
-        function buildCharts() {
-            if(instChartStatus) instChartStatus.destroy();
-            if(instChartAtendentes) instChartAtendentes.destroy();
-
-            const countAtend = chamados.filter(c => c.status === 'EM ATENDIMENTO').length;
-            const countRet = chamados.filter(c => c.status === 'AGUARDANDO RETORNO').length;
-            const countPaus = chamados.filter(c => c.status === 'ATENDIMENTO PAUSADO').length;
-
-            instChartStatus = new Chart(document.getElementById('chartStatus').getContext('2d'), {
-                type: 'doughnut',
-                data: {
-                    labels: ['Atendimento', 'Retorno', 'Pausado'],
-                    datasets: [{ data: [countAtend, countRet, countPaus], backgroundColor: ['#3b82f6', '#f59e0b', '#a855f7'], borderWidth: 0 }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } } }
-            });
-
-            const atendentesMapeados = ['Juliana Ordones', 'Izabela Dobscha', 'Fernando Moura', 'Erica Hernandes', 'Lívia Castro'];
-            const cargaAtendentes = atendentesMapeados.map(at => chamados.filter(c => c.atendente === at).length);
-
-            instChartAtendentes = new Chart(document.getElementById('chartAtendentes').getContext('2d'), {
-                type: 'bar',
-                data: {
-                    labels: atendentesMapeados.map(a => a.split(' ')[0]),
-                    datasets: [{ label: 'Chamados', data: cargaAtendentes, backgroundColor: '#10b981', borderRadius: 4 }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
-            });
-
-            const areaRankingDiv = document.getElementById('area-ranking');
-            areaRankingDiv.innerHTML = '';
-            let areaCounts = {};
-            chamados.forEach(c => { if(c.area) areaCounts[c.area] = (areaCounts[c.area] || 0) + 1; });
-
-            Object.entries(areaCounts).sort((a,b) => b[1] - a[1]).slice(0, 6).forEach(([areaName, count]) => {
-                const card = document.createElement('div');
-                card.className = "bg-slate-50 border border-slate-200 p-3 rounded-xl text-center shadow-sm";
-                card.innerHTML = `<div class="text-[10px] font-bold text-slate-500 truncate uppercase">${areaName}</div><div class="text-xl font-black text-purple-600 mt-0.5">${count}</div>`;
-                areaRankingDiv.appendChild(card);
-            });
-        }
-
-        function renderVincTable() {
-            const tbody = document.getElementById('vinc-table-body');
-            tbody.innerHTML = '';
-            const entries = Object.entries(vinculacaoArea);
-
-            if(entries.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="3" class="px-4 py-6 text-center text-slate-400">Nenhum vínculo aprendido.</td></tr>`;
-                return;
-            }
-
-            entries.forEach(([solicitante, area]) => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td class="px-4 py-3 font-bold text-slate-800">${solicitante}</td>
-                    <td class="px-4 py-3 text-blue-600 font-bold uppercase">${area}</td>
-                    <td class="px-4 py-3 text-right">
-                        <button onclick="deleteVinc('${solicitante}')" class="text-rose-500 hover:bg-rose-50 px-2 py-1 rounded">Apagar</button>
+                    <td class="py-3 px-4 text-center font-bold text-slate-500 text-[11px]">${String(c.id).substring(0,6)}...</td>
+                    <td class="py-3 px-4"><span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${badgePrio}">${c.prioridade}</span></td>
+                    <td class="py-3 px-4"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1.5 w-fit ${badgeStatus}"><span class="w-1.5 h-1.5 rounded-full bg-current"></span>${c.status}</span></td>
+                    <td class="py-3 px-4"><div><p class="font-bold text-slate-200">${c.solicitante || 'N/A'}</p><p class="text-[10px] text-slate-500">${c.area || 'N/A'}</p></div></td>
+                    <td class="py-3 px-4"><div><p class="font-bold text-slate-300">${c.atendente || 'N/A'}</p><p class="text-[10px] text-slate-500">${c.tipo || 'N/A'}</p></div></td>
+                    <td class="py-3 px-4 max-w-xs truncate text-slate-400 font-medium" title="${c.descricao || ''}">${c.descricao || ''}</td>
+                    <td class="py-3 px-4 text-center">
+                        <div class="flex items-center justify-center gap-1.5">
+                            <button onclick="editChamado('${c.id}')" class="p-1.5 hover:bg-slate-900 rounded-lg text-slate-400 hover:text-cyan-400 transition-colors" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button onclick="deleteChamado('${c.id}')" class="p-1.5 hover:bg-slate-900 rounded-lg text-slate-400 hover:text-red-400 transition-colors" title="Eliminar"><i class="fa-solid fa-trash-can"></i></button>
+                        </div>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
         }
 
-        function deleteVinc(solicitante) {
-            db.collection("vinculos").doc(solicitante).delete().then(() => { showToast('Vínculo removido.', 'error'); });
+        // METRICAS E COMPUTAÇÃO GRÁFICA
+        function renderMetricsAndCharts() {
+            const tot = filteredChamados.length;
+            const aberto = filteredChamados.filter(c => c.status === 'Aberto').length;
+            const prog = filteredChamados.filter(c => c.status === 'Em Atendimento').length;
+            const conc = filteredChamados.filter(c => c.status === 'Concluído').length;
+
+            document.getElementById('metric-total').innerText = tot;
+            document.getElementById('metric-aberto').innerText = aberto;
+            document.getElementById('metric-progresso').innerText = prog;
+            document.getElementById('metric-concluido').innerText = conc;
+
+            // Computar agregação por Área Solicitante
+            const areaCounts = {};
+            filteredChamados.forEach(c => { if(c.area) areaCounts[c.area] = (areaCounts[c.area] || 0) + 1; });
+
+            // RENDER CHART STATUS
+            if(chartStatusInstance) chartStatusInstance.destroy();
+            const ctxStatus = document.getElementById('chart-status').getContext('2d');
+            chartStatusInstance = new Chart(ctxStatus, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Aberto', 'Em Atendimento', 'Concluído'],
+                    datasets: [{
+                        data: [aberto, prog, conc],
+                        backgroundColor: ['#f59e0b', '#22d3ee', '#10b981'],
+                        borderWidth: 3,
+                        borderColor: '#020617',
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10, weight: 'bold' }, padding: 15 } } }
+                }
+            });
+
+            // RENDER CHART AREA
+            if(chartAreaInstance) chartAreaInstance.destroy();
+            const ctxArea = document.getElementById('chart-area').getContext('2d');
+            chartAreaInstance = new Chart(ctxArea, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(areaCounts),
+                    datasets: [{
+                        label: 'Chamados',
+                        data: Object.values(areaCounts),
+                        backgroundColor: '#06b6d4',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9, weight: 'bold' } } },
+                        y: { grid: { color: '#1e293b' }, ticks: { color: '#64748b', font: { size: 10 }, precision: 0 } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
         }
 
-        function clearAllVinc() {
-            if(confirm("Apagar todos os vínculos da nuvem?")) {
-                db.collection("vinculos").get().then((querySnapshot) => {
-                    querySnapshot.forEach((doc) => { doc.ref.delete(); });
-                    showToast('Memória limpa.', 'error');
+        // CONTROLO DE MODAL & INTERAÇÕES DE CADASTRO
+        function openModal() {
+            document.getElementById('form-chamado').reset();
+            document.getElementById('chamado-id').value = '';
+            document.getElementById('modal-title').innerText = 'Abertura de Chamado Técnico';
+            
+            // Ocultar a caixa de colagem mágica por padrão ao abrir
+            document.getElementById('magic-paste-container').classList.add('hidden');
+            document.getElementById('magic-paste-text').value = '';
+
+            const modal = document.getElementById('modal-chamado');
+            modal.classList.remove('hidden');
+            setTimeout(() => { modal.firstElementChild.classList.remove('scale-95'); }, 10);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('modal-chamado');
+            modal.firstElementChild.classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); }, 150);
+        }
+
+        function saveChamado(e) {
+            e.preventDefault();
+            const id = document.getElementById('chamado-id').value;
+            const payload = {
+                solicitante: document.getElementById('chamado-solicitante').value,
+                area: document.getElementById('chamado-area').value,
+                atendente: document.getElementById('chamado-atendente').value,
+                tipo: document.getElementById('chamado-tipo').value,
+                status: document.getElementById('chamado-status').value,
+                prioridade: document.getElementById('chamado-prioridade').value,
+                descricao: document.getElementById('chamado-descricao').value
+            };
+
+            if(id) {
+                db.collection("chamados").doc(id).update(payload).then(() => {
+                    showToast("Registo atualizado na nuvem com sucesso.");
+                    closeModal();
+                });
+            } else {
+                db.collection("chamados").add(payload).then(() => {
+                    showToast("Novo chamado inserido com sucesso na nuvem.");
+                    closeModal();
                 });
             }
         }
 
-        // Leitor de Planilha Excel (Integração Direta com Firebase)
+        function editChamado(id) {
+            const c = chamados.find(item => item.id === id);
+            if(!c) return;
+
+            document.getElementById('chamado-id').value = c.id;
+            document.getElementById('chamado-solicitante').value = c.solicitante || '';
+            document.getElementById('chamado-area').value = c.area || '';
+            document.getElementById('chamado-atendente').value = c.atendente || '';
+            document.getElementById('chamado-tipo').value = c.tipo || 'Suporte';
+            document.getElementById('chamado-status').value = c.status || 'Aberto';
+            document.getElementById('chamado-prioridade').value = c.prioridade || 'Média';
+            document.getElementById('chamado-descricao').value = c.descricao || '';
+
+            document.getElementById('modal-title').innerText = `Edição do Chamado #${String(c.id).substring(0,6)}`;
+            document.getElementById('magic-paste-container').classList.add('hidden'); // Oculta na edição
+
+            const modal = document.getElementById('modal-chamado');
+            modal.classList.remove('hidden');
+        }
+
+        function deleteChamado(id) {
+            if(confirm("Confirma a eliminação irreversível deste chamado do cluster na nuvem?")) {
+                db.collection("chamados").doc(id).delete().then(() => {
+                    showToast("Chamado expurgado com sucesso.", "warning");
+                });
+            }
+        }
+
+        // CARGA MASSIVA VIA EXCEL ENGINE
         function handleExcelImport(e) {
             const file = e.target.files[0];
-            if (!file) return;
+            if(!file) return;
+
             const reader = new FileReader();
-            reader.onload = function(e) {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+            reader.onload = function(evt) {
+                const data = new Uint8Array(evt.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(sheet);
 
+                let batch = db.batch();
                 let count = 0;
-                const batch = db.batch(); // Otimizado usando batch para evitar requisições individuais lentas
 
-                json.forEach(row => {
-                    const rawId = row['ID'] || row['id'] || row['Número'] || row['NUMERO'];
-                    if (!rawId) return;
-
-                    const id = rawId.toString().trim();
-                    const itemRef = db.collection("chamados").doc(id);
-
-                    const item = {
-                        id: id,
-                        prioridade: (row['PRIORIDADE'] || row['prioridade'] || 'NORMAL').toString().toUpperCase().trim() === 'ALTA' ? 'ALTA' : 'NORMAL',
-                        status: (row['STATUS'] || row['status'] || 'EM ATENDIMENTO').toString().toUpperCase().trim(),
-                        solicitante: row['SOLICITANTE'] || row['solicitante'] || 'Desconhecido',
-                        area: (row['ÁREA SOLICITANTE'] || row['ÁREA'] || 'Setor Geral').toString().toUpperCase().trim(),
-                        atendente: row['ATENDENTE'] || row['atendente'] || 'Juliana Ordones',
-                        tipo: row['TIPO'] || row['tipo'] || '',
-                        descricao: row['DESCRIÇÃO'] || row['descrição'] || '',
-                        data_criacao: row['DATA DE CRIAÇÃO'] || new Date().toISOString().split('T')[0],
-                        ultima_mod: new Date().toISOString().split('T')[0]
-                    };
-
-                    batch.set(itemRef, item, { merge: true });
-
-                    if (item.solicitante && item.area) {
-                        const vincRef = db.collection("vinculos").doc(item.solicitante);
-                        batch.set(vincRef, { area: item.area });
+                rows.forEach(item => {
+                    let ref = db.collection("chamados").doc();
+                    batch.set(ref, {
+                        solicitante: item['SOLICITANTE'] || '',
+                        area: item['ÁREA SOLICITANTE'] || '',
+                        atendente: item['ATENDENTE'] || '',
+                        tipo: item['TIPO'] || 'Suporte',
+                        status: item['STATUS'] || 'Aberto',
+                        prioridade: item['PRIORIDADE'] || 'Média',
+                        descricao: item['DESCRIÇÃO'] || ''
+                    });
+                    if (item['SOLICITANTE'] && item['ÁREA SOLICITANTE']) {
+                        batch.set(db.collection("vinculos").doc(item['SOLICITANTE']), { area: item['ÁREA SOLICITANTE'] });
                     }
                     count++;
                 });
 
-                batch.commit().then(() => {
-                    showToast(`${count} itens sincronizados com a Nuvem!`);
-                }).catch(err => {
-                    showToast('Erro ao sincronizar lote de dados.', 'error');
-                    console.error(err);
-                });
+                batch.commit().then(() => showToast(`${count} itens sincronizados na nuvem!`));
             };
             reader.readAsArrayBuffer(file);
         }
@@ -821,25 +807,17 @@
         document.getElementById('excel-import-mobile').addEventListener('change', handleExcelImport);
 
         async function exportToExcel() {
-            if(chamados.length === 0) { showToast('Nenhum dado para exportar.', 'error'); return; }
-            const workbook = new ExcelJS.Workbook();
-            const worksheet = workbook.addWorksheet('Principal');
-
+            if(chamados.length === 0) { showToast('Sem dados para exportar.', 'error'); return; }
+            const workbook = new ExcelJS.Workbook(), worksheet = workbook.addWorksheet('Principal');
             worksheet.columns = [
-                { header: 'ID', key: 'id', width: 10 },
-                { header: 'PRIORIDADE', key: 'prioridade', width: 15 },
-                { header: 'STATUS', key: 'status', width: 20 },
-                { header: 'SOLICITANTE', key: 'solicitante', width: 25 },
-                { header: 'ÁREA SOLICITANTE', key: 'area', width: 20 },
-                { header: 'ATENDENTE', key: 'atendente', width: 20 },
-                { header: 'TIPO', key: 'tipo', width: 12 },
-                { header: 'DESCRIÇÃO', key: 'descricao', width: 40 }
+                { header: 'ID', key: 'id', width: 10 }, { header: 'PRIORIDADE', key: 'prioridade', width: 15 }, { header: 'STATUS', key: 'status', width: 20 },
+                { header: 'SOLICITANTE', key: 'solicitante', width: 25 }, { header: 'ÁREA SOLICITANTE', key: 'area', width: 20 }, { header: 'ATENDENTE', key: 'atendente', width: 20 },
+                { header: 'TIPO', key: 'tipo', width: 12 }, { header: 'DESCRIÇÃO', key: 'descricao', width: 40 }
             ];
-
             chamados.forEach(c => worksheet.addRow(c));
             const buffer = await workbook.xlsx.writeBuffer();
             saveAs(new Blob([buffer]), `HISTORICO_CHAMADOS_NUVEM.xlsx`);
-            showToast('Planilha baixada!');
+            showToast('Planilha Excel baixada.');
         }
     </script>
 </body>
