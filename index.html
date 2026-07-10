@@ -346,7 +346,7 @@
                     </div>
                     <div>
                         <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Área Solicitante *</label>
-                        <input type="text" id="modal-area" required class="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs md:text-sm outline-none bg-slate-50">
+                        <input type="text" id="modal-area" required class="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none bg-slate-50">
                     </div>
                 </div>
 
@@ -395,19 +395,24 @@
             measurementId: "G-2HFKK1ZW72"
         };
 
-        // Inicializa o Firebase
-        firebase.initializeApp(firebaseConfig);
+        // Inicializa o Firebase de forma segura
+        try {
+            firebase.initializeApp(firebaseConfig);
+        } catch (error) {
+            console.error("Erro ao inicializar o Firebase:", error);
+        }
+        
         const db = firebase.firestore();
 
         let chamados = [];
         let vinculacaoArea = {};
         let instChartStatus = null;
         let instChartAtendentes = null;
+        
+        // Memória para armazenar o último chamado deletado para o Ctrl + Z
+        let ultimoChamadoExcluido = null;
 
-        // Memória para o histórico de exclusões (Ctrl + Z)
-        let ultimoChamadoDeletado = null;
-
-        // OUVINTE EM TEMPO REAL: Toda alteração no banco atualiza o PC e o Celular na hora!
+        // OUVINTE EM TEMPO REAL: Atualização instantânea na nuvem
         db.collection("chamados").onSnapshot((snapshot) => {
             chamados = [];
             snapshot.forEach((doc) => {
@@ -415,6 +420,9 @@
             });
             renderTable();
             if(document.getElementById('tab-analytics').classList.contains('active')) buildCharts();
+        }, (error) => {
+            console.error("Erro ao carregar chamados:", error);
+            showToast("Erro ao sincronizar chamados em tempo real.", "error");
         });
 
         db.collection("vinculos").onSnapshot((snapshot) => {
@@ -423,54 +431,14 @@
                 vinculacaoArea[doc.id] = doc.data().area;
             });
             if(document.getElementById('tab-vinc_manager').classList.contains('active')) renderVincTable();
+        }, (error) => {
+            console.error("Erro ao carregar vínculos:", error);
         });
 
         // Configuração de Data e Visual
         document.getElementById('data-hoje').innerText = new Date().toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-        // Atalho de Teclado Global para Ctrl + Z
-        window.addEventListener('keydown', function(e) {
-            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
-                // Evita conflitos com inputs de texto normais
-                if (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
-                    e.preventDefault();
-                    desfazerExclusao();
-                }
-            }
-        });
-
-        // Função para reverter a exclusão
-        function desfazerExclusao() {
-            if (!ultimoChamadoDeletado) return;
-            
-            const item = ultimoChamadoDeletado;
-            db.collection("chamados").doc(item.id).set(item).then(() => {
-                showToast(`Chamado #${item.id} restaurado com sucesso!`, 'success');
-                ultimoChamadoDeletado = null; // Limpa para evitar restaurações duplicadas
-            }).catch(() => {
-                showToast('Erro ao restaurar chamado da nuvem.', 'error');
-            });
-        }
-
-        // Modificação no sistema de avisos para aceitar um botão de ação rápida
-        function showToast(message, type = 'success', actionHtml = '') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            let bgClass = type === 'error' ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800';
-            let iconClass = type === 'error' ? 'fa-solid fa-circle-xmark text-rose-500' : 'fa-solid fa-circle-check text-emerald-500';
-
-            toast.className = `toast border flex items-center justify-between p-3 rounded-xl shadow-lg font-medium text-xs md:text-sm bg-white ${bgClass}`;
-            toast.innerHTML = `
-                <div class="flex items-center">
-                    <i class="${iconClass} text-base mr-2"></i>
-                    <span>${message}</span>
-                </div>
-                ${actionHtml}
-            `;
-            container.appendChild(toast);
-            setTimeout(() => { toast.classList.add('hide'); setTimeout(() => toast.remove(), 300); }, 4500);
-        }
-
+        // Controle do Menu no Celular
         function toggleMobileSidebar() {
             const sidebar = document.getElementById('sidebar');
             const backdrop = document.getElementById('sidebar-backdrop');
@@ -487,6 +455,18 @@
             }
         }
 
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            let bgClass = type === 'error' ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800';
+            let iconClass = type === 'error' ? 'fa-solid fa-circle-xmark text-rose-500' : 'fa-solid fa-circle-check text-emerald-500';
+
+            toast.className = `toast border flex items-center p-3 rounded-xl shadow-lg font-medium text-xs md:text-sm bg-white ${bgClass}`;
+            toast.innerHTML = `<i class="${iconClass} text-base mr-2"></i><span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.classList.add('hide'); setTimeout(() => toast.remove(), 300); }, 3000);
+        }
+
         function switchTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.sidebar-btn').forEach(el => {
@@ -500,6 +480,7 @@
             if (tabName === 'analytics') buildCharts();
             if (tabName === 'vinc_manager') renderVincTable();
             
+            // Fecha a barra lateral se estiver no celular
             if(window.innerWidth < 768) toggleMobileSidebar();
         }
 
@@ -525,6 +506,9 @@
             db.collection("vinculos").doc(sol).set({ area: area }).then(() => {
                 document.getElementById('vinc-manual-form').reset();
                 showToast('Novo vínculo salvo na nuvem!');
+            }).catch(err => {
+                showToast('Erro ao salvar vínculo.', 'error');
+                console.error(err);
             });
         }
 
@@ -538,7 +522,11 @@
             body.innerHTML = '';
 
             let filtered = chamados.filter(item => {
-                const matchSearch = !search || item.id.toString().toLowerCase().includes(search) || item.solicitante.toLowerCase().includes(search) || item.atendente.toLowerCase().includes(search) || item.descricao.toLowerCase().includes(search);
+                const matchSearch = !search || 
+                    (item.id && item.id.toString().toLowerCase().includes(search)) || 
+                    (item.solicitante && item.solicitante.toLowerCase().includes(search)) || 
+                    (item.atendente && item.atendente.toLowerCase().includes(search)) || 
+                    (item.descricao && item.descricao.toLowerCase().includes(search));
                 const matchStatus = !filterStatus || item.status === filterStatus;
                 const matchPriority = !filterPriority || item.prioridade === filterPriority;
                 return matchSearch && matchStatus && matchPriority;
@@ -636,7 +624,9 @@
                 ultima_mod: new Date().toISOString().split('T')[0]
             };
 
-            if (solicitante && area) db.collection("vinculos").doc(solicitante).set({ area: area });
+            if (solicitante && area) {
+                db.collection("vinculos").doc(solicitante).set({ area: area }).catch(err => console.error("Erro ao salvar vinculo implícito:", err));
+            }
 
             if(!editId && chamados.some(c => c.id.toString() === id.toString())) {
                 showToast('Erro: Este ID já existe!', 'error');
@@ -648,24 +638,54 @@
             db.collection("chamados").doc(id).set(itemData, { merge: true }).then(() => {
                 showToast(`Chamado #${id} salvo na nuvem.`);
                 closeModal();
+            }).catch(err => {
+                showToast('Erro ao salvar o chamado na nuvem.', 'error');
+                console.error(err);
             });
         }
 
         function editChamado(id) { openModal(id); }
         
         function deleteChamado(id) {
-            const itemParaDeletar = chamados.find(c => c.id.toString() === id.toString());
-            
-            if(itemParaDeletar && confirm(`Excluir chamado #${id} da nuvem?`)) {
-                // Guarda uma cópia local antes de apagar da nuvem
-                ultimoChamadoDeletado = { ...itemParaDeletar };
+            if(confirm(`Excluir chamado #${id} da nuvem?`)) {
+                // Captura e faz backup do chamado antes de excluí-lo da nuvem
+                const backup = chamados.find(c => c.id.toString() === id.toString());
+                if (backup) {
+                    ultimoChamadoExcluido = { ...backup };
+                }
 
                 db.collection("chamados").doc(id).delete().then(() => {
-                    const btnHtml = `<button onclick="desfazerExclusao()" class="ml-4 bg-rose-600 text-white px-2 py-1 rounded text-xs font-bold hover:bg-rose-700 transition">Desfazer (Ctrl+Z)</button>`;
-                    showToast(`Chamado #${id} removido.`, 'error', btnHtml);
+                    showToast('Chamado removido! Pressione Ctrl + Z para desfazer.', 'error');
+                }).catch(err => {
+                    showToast('Erro ao excluir chamado.', 'error');
+                    console.error(err);
                 });
             }
         }
+
+        // Ouvinte global para monitorar o comando Ctrl + Z
+        document.addEventListener('keydown', function(event) {
+            // Verifica se as teclas Ctrl + Z (ou Cmd + Z no Mac) foram acionadas juntas
+            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+                if (ultimoChamadoExcluido) {
+                    event.preventDefault(); // Impede efeitos nativos do navegador
+                    
+                    const itemRestaurar = { ...ultimoChamadoExcluido };
+                    const id = itemRestaurar.id;
+                    
+                    // Insere novamente o item no Firestore da Nuvem
+                    db.collection("chamados").doc(id).set(itemRestaurar)
+                        .then(() => {
+                            showToast(`Exclusão desfeita! Chamado #${id} restaurado.`);
+                            ultimoChamadoExcluido = null; // Esvazia para evitar restaurações repetidas por acidente
+                        })
+                        .catch(err => {
+                            showToast('Não foi possível restaurar o chamado.', 'error');
+                            console.error(err);
+                        });
+                }
+            }
+        });
 
         function buildCharts() {
             if(instChartStatus) instChartStatus.destroy();
@@ -756,12 +776,17 @@
                 const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
 
                 let count = 0;
+                const batch = db.batch(); // Otimizado usando batch para evitar requisições individuais lentas
+
                 json.forEach(row => {
-                    const id = row['ID'] || row['id'] || row['Número'] || row['NUMERO'];
-                    if (!id) return;
+                    const rawId = row['ID'] || row['id'] || row['Número'] || row['NUMERO'];
+                    if (!rawId) return;
+
+                    const id = rawId.toString().trim();
+                    const itemRef = db.collection("chamados").doc(id);
 
                     const item = {
-                        id: id.toString(),
+                        id: id,
                         prioridade: (row['PRIORIDADE'] || row['prioridade'] || 'NORMAL').toString().toUpperCase().trim() === 'ALTA' ? 'ALTA' : 'NORMAL',
                         status: (row['STATUS'] || row['status'] || 'EM ATENDIMENTO').toString().toUpperCase().trim(),
                         solicitante: row['SOLICITANTE'] || row['solicitante'] || 'Desconhecido',
@@ -773,11 +798,21 @@
                         ultima_mod: new Date().toISOString().split('T')[0]
                     };
 
-                    db.collection("chamados").doc(item.id).set(item, { merge: true });
-                    if (item.solicitante && item.area) db.collection("vinculos").doc(item.solicitante).set({ area: item.area });
+                    batch.set(itemRef, item, { merge: true });
+
+                    if (item.solicitante && item.area) {
+                        const vincRef = db.collection("vinculos").doc(item.solicitante);
+                        batch.set(vincRef, { area: item.area });
+                    }
                     count++;
                 });
-                showToast(`${count} itens sincronizados com a Nuvem!`);
+
+                batch.commit().then(() => {
+                    showToast(`${count} itens sincronizados com a Nuvem!`);
+                }).catch(err => {
+                    showToast('Erro ao sincronizar lote de dados.', 'error');
+                    console.error(err);
+                });
             };
             reader.readAsArrayBuffer(file);
         }
