@@ -4,13 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel de Gestão de Chamados Pro</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome para Ícones -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- ExcelJS e FileSaver -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <!-- SheetJS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
+    <!-- SDKs do Firebase Compat -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     
@@ -20,7 +26,7 @@
         
         .tab-content { display: none; }
         .tab-content.active { 
-            display: block;
+            display: block; 
             animation: fadeInSlide 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
@@ -62,6 +68,7 @@
 </head>
 <body class="bg-slate-50 text-gray-800 antialiased h-screen flex flex-col md:flex-row overflow-hidden">
 
+    <!-- BARRA SUPERIOR MOBILE -->
     <div class="md:hidden h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 z-30 shrink-0">
         <div class="flex items-center">
             <div class="bg-blue-600 p-2 rounded-lg text-white mr-3">
@@ -74,6 +81,7 @@
         </button>
     </div>
 
+    <!-- SIDEBAR -->
     <aside id="sidebar" class="fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 w-64 bg-white flex flex-col border-r border-gray-200 z-40 transition-transform duration-300 ease-in-out h-full shrink-0">
         <div class="h-20 flex items-center px-6 border-b border-gray-200 bg-white">
             <div class="bg-blue-600 p-2.5 rounded-lg shadow-md shadow-blue-500/20 flex items-center justify-center mr-3">
@@ -107,8 +115,10 @@
         </div>
     </aside>
 
+    <!-- BACKDROP MOBILE -->
     <div id="sidebar-backdrop" onclick="toggleMobileSidebar()" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-30 hidden md:hidden"></div>
 
+    <!-- CONTEÚDO PRINCIPAL -->
     <main class="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         
         <header class="hidden md:flex h-20 bg-white border-b border-gray-200 items-center justify-between px-8 z-10 shrink-0">
@@ -144,6 +154,7 @@
 
         <div class="flex-1 overflow-y-auto p-4 md:p-8 relative">
             
+            <!-- ABA 1: PAINEL DE CONTROLE -->
             <div id="tab-dashboard" class="tab-content active space-y-6">
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                     <div class="bg-white p-4 md:p-5 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between relative overflow-hidden">
@@ -232,6 +243,7 @@
                 </div>
             </div>
 
+            <!-- ABA 2: METRICAS -->
             <div id="tab-analytics" class="tab-content space-y-6">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="bg-white p-4 md:p-6 rounded-xl border border-gray-200 shadow-sm">
@@ -262,6 +274,7 @@
                 </div>
             </div>
 
+            <!-- ABA 3: VINCULOS -->
             <div id="tab-vinc_manager" class="tab-content space-y-6">
                 <div class="bg-white p-4 md:p-6 rounded-xl border border-gray-200 shadow-sm">
                     <h4 class="text-xs md:text-sm font-bold text-slate-700 mb-4 flex items-center space-x-2">
@@ -306,6 +319,7 @@
         </div>
     </main>
 
+    <!-- MODAL DE CADASTRO -->
     <div id="chamado-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden items-center justify-center z-50 p-3 opacity-0 transition-opacity duration-200">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-xl overflow-hidden max-h-[90vh] flex flex-col transform scale-95 transition-transform duration-200" id="modal-container">
             <div class="bg-slate-800 px-4 py-4 flex items-center justify-between shrink-0">
@@ -393,6 +407,7 @@
         </div>
     </div>
 
+    <!-- TOASTS -->
     <div id="toast-container"></div>
 
     <script>
@@ -428,11 +443,11 @@
             
             if (last.type === 'chamado') {
                 db.collection("chamados").doc(last.id).set(last.data).then(() => {
-                    showToast(`Chamado #${last.id} restaurado com sucesso!`);
+                    showToast(`Chamado #${last.id} restaurado!`);
                 });
             } else if (last.type === 'vinculo') {
                 db.collection("vinculos").doc(last.id).set(last.data).then(() => {
-                    showToast(`Vínculo de ${last.id} restaurado!`);
+                    showToast(`Vínculo restaurado!`);
                 });
             } else if (last.type === 'vinculos_all') {
                 const batch = db.batch();
@@ -443,9 +458,14 @@
             }
         }
 
-        // Listener para Ctrl+Z no teclado
+        // Listener seguro para Ctrl+Z
         document.addEventListener('keydown', function(event) {
             if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+                // Evita chamar a função caso o usuário esteja apenas apagando o texto que digitou em um formulário
+                const activeTag = document.activeElement ? document.activeElement.tagName : '';
+                if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') return;
+                
+                event.preventDefault();
                 undoLastAction();
             }
         });
@@ -477,15 +497,52 @@
             }
         }
 
-        // Modificado para aceitar duração personalizada para os Toasts de Undo
+        // FUNÇÃO DE NOTIFICAÇÃO PADRÃO
         function showToast(m, t = 'success', duration = 3000) {
-            const c = document.getElementById('toast-container'), toast = document.createElement('div');
+            const c = document.getElementById('toast-container');
+            if(!c) return;
+            const toast = document.createElement('div');
             let bg = t === 'error' ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800';
             let ic = t === 'error' ? 'fa-solid fa-circle-xmark text-rose-500' : 'fa-solid fa-circle-check text-emerald-500';
             toast.className = `toast border flex items-center p-3 rounded-xl shadow-lg font-medium text-xs md:text-sm bg-white ${bg}`;
             toast.innerHTML = `<i class="${ic} text-base mr-2"></i><span class="flex-1">${m}</span>`;
             c.appendChild(toast);
             setTimeout(() => { toast.classList.add('hide'); setTimeout(() => toast.remove(), 300); }, duration);
+        }
+
+        // NOVA FUNÇÃO DE NOTIFICAÇÃO EXCLUSIVA PARA DESFAZER (À prova de falhas)
+        function showToastWithUndo(m, duration = 6000) {
+            const c = document.getElementById('toast-container');
+            if(!c) return;
+            const toast = document.createElement('div');
+            toast.className = `toast border flex items-center p-3 rounded-xl shadow-lg font-medium text-xs md:text-sm bg-emerald-50 border-emerald-200 text-emerald-800`;
+            
+            // Note que injetamos o botão sem onClick explícito por questões de segurança
+            toast.innerHTML = `
+                <i class="fa-solid fa-circle-check text-emerald-500 text-base mr-2"></i>
+                <span class="flex-1">${m}</span>
+                <button class="ml-3 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded shadow-sm text-xs font-bold transition-colors">
+                    <i class="fa-solid fa-rotate-left mr-1"></i> Desfazer
+                </button>
+            `;
+            c.appendChild(toast);
+
+            // Adicionamos a lógica de clique de forma limpa pelo JavaScript
+            const btn = toast.querySelector('button');
+            if(btn) {
+                btn.addEventListener('click', () => {
+                    undoLastAction();
+                    toast.classList.add('hide'); 
+                    setTimeout(() => toast.remove(), 300);
+                });
+            }
+
+            setTimeout(() => { 
+                if(document.body.contains(toast)) {
+                    toast.classList.add('hide'); 
+                    setTimeout(() => toast.remove(), 300); 
+                }
+            }, duration);
         }
 
         function switchTab(t) {
@@ -590,6 +647,7 @@
             const filterStatus = document.getElementById('filter-status').value;
             const filterPriority = document.getElementById('filter-priority').value;
             body.innerHTML = '';
+            
             let filtered = chamados.filter(item => {
                 const matchSearch = !search || 
                     (item.id && item.id.toString().toLowerCase().includes(search)) || 
@@ -600,6 +658,7 @@
                 const matchPriority = !filterPriority || item.prioridade === filterPriority;
                 return matchSearch && matchStatus && matchPriority;
             });
+            
             document.getElementById('stat-atendimento').innerText = chamados.filter(c => c.status === 'EM ATENDIMENTO').length;
             document.getElementById('stat-retorno').innerText = chamados.filter(c => c.status === 'AGUARDANDO RETORNO').length;
             document.getElementById('stat-pausado').innerText = chamados.filter(c => c.status === 'ATENDIMENTO PAUSADO').length;
@@ -639,7 +698,7 @@
             document.getElementById('edit-index').value = ''; document.getElementById('modal-id').disabled = false;
             autocompleteArea('');
             if(id) {
-                const item = chamados.find(c => c.id.toString() === id.toString());
+                const item = chamados.find(c => c.id && String(c.id) === String(id));
                 if(item) {
                     document.getElementById('edit-index').value = item.id;
                     document.getElementById('modal-id').value = item.id; document.getElementById('modal-id').disabled = true;
@@ -684,7 +743,7 @@
             };
             
             if (solicitante && area) { db.collection("vinculos").doc(solicitante).set({ area: area }); }
-            if(!editId && chamados.some(c => c.id.toString() === id.toString())) { showToast('ID já cadastrado!', 'error'); return; }
+            if(!editId && chamados.some(c => c.id && String(c.id) === String(id))) { showToast('ID já cadastrado!', 'error'); return; }
             if(!editId) itemData.data_criacao = new Date().toISOString().split('T')[0];
             
             db.collection("chamados").doc(id).set(itemData, { merge: true }).then(() => {
@@ -694,16 +753,22 @@
 
         function editChamado(id) { openModal(id); }
         
-        // Modificado com lógica de Desfazer
+        // CORRIGIDO: Lógica Blindada Contra Falhas no ID
         function deleteChamado(id) { 
             if(confirm(`Excluir #${id}?`)) { 
-                const item = chamados.find(c => c.id.toString() === id.toString());
+                const idStr = String(id);
+                const item = chamados.find(c => c && c.id && String(c.id) === idStr);
+                
                 if(item) {
-                    undoStack.push({ type: 'chamado', id: id, data: item });
-                    db.collection("chamados").doc(id).delete().then(() => {
-                        // Toast de 6 segundos com botão embutido
-                        showToast(`Chamado #${id} excluído. <button onclick="undoLastAction()" class="ml-2 underline font-bold hover:text-emerald-900 cursor-pointer">Desfazer (Ctrl+Z)</button>`, 'success', 6000);
+                    undoStack.push({ type: 'chamado', id: idStr, data: item });
+                    db.collection("chamados").doc(idStr).delete().then(() => {
+                        showToastWithUndo(`Chamado #${idStr} excluído.`);
+                    }).catch(err => {
+                        console.error(err);
+                        showToast('Falha na comunicação com a nuvem.', 'error');
                     });
+                } else {
+                    showToast('Erro interno: Chamado não localizado.', 'error');
                 }
             } 
         }
@@ -752,25 +817,30 @@
             });
         }
 
-        // Modificado com lógica de Desfazer
         function deleteVinc(s) { 
             const area = vinculacaoArea[s];
             if(area) {
                 undoStack.push({ type: 'vinculo', id: s, data: { area: area } });
                 db.collection("vinculos").doc(s).delete().then(() => {
-                    showToast(`Vínculo apagado. <button onclick="undoLastAction()" class="ml-2 underline font-bold hover:text-emerald-900 cursor-pointer">Desfazer (Ctrl+Z)</button>`, 'success', 6000);
+                    showToastWithUndo(`Vínculo de ${s} apagado.`);
                 });
             }
         }
         
-        // Modificado com lógica de Desfazer
         function clearAllVinc() { 
-            if(confirm("Resetar?")) { 
+            if(confirm("Deseja mesmo resetar todos os vínculos?")) { 
                 const snapshot = Object.entries(vinculacaoArea).map(([s, a]) => ({id: s, data: {area: a}}));
+                if (snapshot.length === 0) {
+                    showToast('Não há vínculos salvos no momento.', 'error'); return;
+                }
+                
                 undoStack.push({ type: 'vinculos_all', items: snapshot });
-                db.collection("vinculos").get().then(s => {
-                    s.forEach(d => d.ref.delete());
-                    showToast(`Vínculos resetados. <button onclick="undoLastAction()" class="ml-2 underline font-bold hover:text-emerald-900 cursor-pointer">Desfazer (Ctrl+Z)</button>`, 'success', 6000);
+                const batch = db.batch();
+                snapshot.forEach(item => {
+                    batch.delete(db.collection("vinculos").doc(item.id));
+                });
+                batch.commit().then(() => {
+                    showToastWithUndo(`Os vínculos foram resetados.`);
                 });
             } 
         }
