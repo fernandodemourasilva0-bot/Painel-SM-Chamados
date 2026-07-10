@@ -4,19 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel de Gestão de Chamados Pro</title>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome para Ícones -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- ExcelJS e FileSaver -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <!-- SheetJS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <!-- SDKs do Firebase Compat (essenciais para rodar direto no HTML) -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     
@@ -26,7 +20,7 @@
         
         .tab-content { display: none; }
         .tab-content.active { 
-            display: block; 
+            display: block;
             animation: fadeInSlide 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
@@ -68,7 +62,6 @@
 </head>
 <body class="bg-slate-50 text-gray-800 antialiased h-screen flex flex-col md:flex-row overflow-hidden">
 
-    <!-- BARRA SUPERIOR MOBILE -->
     <div class="md:hidden h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 z-30 shrink-0">
         <div class="flex items-center">
             <div class="bg-blue-600 p-2 rounded-lg text-white mr-3">
@@ -81,7 +74,6 @@
         </button>
     </div>
 
-    <!-- ================= SIDEBAR (SUPORTE DESKTOP E MOBILE) ================= -->
     <aside id="sidebar" class="fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 w-64 bg-white flex flex-col border-r border-gray-200 z-40 transition-transform duration-300 ease-in-out h-full shrink-0">
         <div class="h-20 flex items-center px-6 border-b border-gray-200 bg-white">
             <div class="bg-blue-600 p-2.5 rounded-lg shadow-md shadow-blue-500/20 flex items-center justify-center mr-3">
@@ -115,10 +107,8 @@
         </div>
     </aside>
 
-    <!-- BACKDROP MOBILE -->
     <div id="sidebar-backdrop" onclick="toggleMobileSidebar()" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-30 hidden md:hidden"></div>
 
-    <!-- ================= CONTEÚDO PRINCIPAL ================= -->
     <main class="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         
         <header class="hidden md:flex h-20 bg-white border-b border-gray-200 items-center justify-between px-8 z-10 shrink-0">
@@ -154,7 +144,6 @@
 
         <div class="flex-1 overflow-y-auto p-4 md:p-8 relative">
             
-            <!-- ABA 1: PAINEL DE CONTROLE -->
             <div id="tab-dashboard" class="tab-content active space-y-6">
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                     <div class="bg-white p-4 md:p-5 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between relative overflow-hidden">
@@ -243,7 +232,6 @@
                 </div>
             </div>
 
-            <!-- ABA 2: METRICAS -->
             <div id="tab-analytics" class="tab-content space-y-6">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="bg-white p-4 md:p-6 rounded-xl border border-gray-200 shadow-sm">
@@ -274,7 +262,6 @@
                 </div>
             </div>
 
-            <!-- ABA 3: VINCULOS -->
             <div id="tab-vinc_manager" class="tab-content space-y-6">
                 <div class="bg-white p-4 md:p-6 rounded-xl border border-gray-200 shadow-sm">
                     <h4 class="text-xs md:text-sm font-bold text-slate-700 mb-4 flex items-center space-x-2">
@@ -319,7 +306,6 @@
         </div>
     </main>
 
-    <!-- MODAL DE CADASTRO COM PREENCHIMENTO INTELIGENTE -->
     <div id="chamado-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden items-center justify-center z-50 p-3 opacity-0 transition-opacity duration-200">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-xl overflow-hidden max-h-[90vh] flex flex-col transform scale-95 transition-transform duration-200" id="modal-container">
             <div class="bg-slate-800 px-4 py-4 flex items-center justify-between shrink-0">
@@ -330,7 +316,6 @@
             <form id="chamado-form" onsubmit="saveChamado(event)" class="p-4 md:p-6 space-y-4 overflow-y-auto flex-1 text-xs md:text-sm">
                 <input type="hidden" id="edit-index">
                 
-                <!-- CAIXA DE COLAGEM MÁGICA -->
                 <div class="bg-indigo-50 border border-indigo-200 p-3 rounded-lg mb-2">
                     <label class="block text-[10px] font-bold text-indigo-600 uppercase mb-1 flex items-center">
                         <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Preenchimento Automático (Ctrl+A e Ctrl+C na tela do chamado)
@@ -408,7 +393,6 @@
         </div>
     </div>
 
-    <!-- TOASTS -->
     <div id="toast-container"></div>
 
     <script>
@@ -422,14 +406,50 @@
             appId: "1:526976866320:web:508cc1c55becbf7d989295",
             measurementId: "G-2HFKK1ZW72"
         };
-
         try { firebase.initializeApp(firebaseConfig); } catch (e) { console.error(e); }
         const db = firebase.firestore();
-
+        
         let chamados = [];
         let vinculacaoArea = {};
         let instChartStatus = null;
         let instChartAtendentes = null;
+        
+        // ----------------------------------------------------
+        // SISTEMA DE DESFAZER (UNDO STACK)
+        // ----------------------------------------------------
+        let undoStack = [];
+
+        function undoLastAction() {
+            if (undoStack.length === 0) {
+                showToast('Nada para desfazer.', 'error');
+                return;
+            }
+            const last = undoStack.pop();
+            
+            if (last.type === 'chamado') {
+                db.collection("chamados").doc(last.id).set(last.data).then(() => {
+                    showToast(`Chamado #${last.id} restaurado com sucesso!`);
+                });
+            } else if (last.type === 'vinculo') {
+                db.collection("vinculos").doc(last.id).set(last.data).then(() => {
+                    showToast(`Vínculo de ${last.id} restaurado!`);
+                });
+            } else if (last.type === 'vinculos_all') {
+                const batch = db.batch();
+                last.items.forEach(item => {
+                    batch.set(db.collection("vinculos").doc(item.id), item.data);
+                });
+                batch.commit().then(() => showToast('Todos os vínculos foram restaurados!'));
+            }
+        }
+
+        // Listener para Ctrl+Z no teclado
+        document.addEventListener('keydown', function(event) {
+            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+                undoLastAction();
+            }
+        });
+        // ----------------------------------------------------
 
         db.collection("chamados").onSnapshot((snapshot) => {
             chamados = [];
@@ -437,32 +457,35 @@
             renderTable();
             if(document.getElementById('tab-analytics').classList.contains('active')) buildCharts();
         });
-
+        
         db.collection("vinculos").onSnapshot((snapshot) => {
             vinculacaoArea = {};
             snapshot.forEach(doc => vinculacaoArea[doc.id] = doc.data().area);
             if(document.getElementById('tab-vinc_manager').classList.contains('active')) renderVincTable();
         });
-
+        
         document.getElementById('data-hoje').innerText = new Date().toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-
+        
         function toggleMobileSidebar() {
             const s = document.getElementById('sidebar'), b = document.getElementById('sidebar-backdrop'), i = document.getElementById('menu-icon');
             if(s.classList.contains('-translate-x-full')) {
-                s.classList.remove('-translate-x-full'); b.classList.remove('hidden'); i.className = "fa-solid fa-xmark text-xl";
+                s.classList.remove('-translate-x-full'); b.classList.remove('hidden');
+                i.className = "fa-solid fa-xmark text-xl";
             } else {
-                s.classList.add('-translate-x-full'); b.classList.add('hidden'); i.className = "fa-solid fa-bars text-xl";
+                s.classList.add('-translate-x-full');
+                b.classList.add('hidden'); i.className = "fa-solid fa-bars text-xl";
             }
         }
 
-        function showToast(m, t = 'success') {
+        // Modificado para aceitar duração personalizada para os Toasts de Undo
+        function showToast(m, t = 'success', duration = 3000) {
             const c = document.getElementById('toast-container'), toast = document.createElement('div');
             let bg = t === 'error' ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800';
             let ic = t === 'error' ? 'fa-solid fa-circle-xmark text-rose-500' : 'fa-solid fa-circle-check text-emerald-500';
             toast.className = `toast border flex items-center p-3 rounded-xl shadow-lg font-medium text-xs md:text-sm bg-white ${bg}`;
-            toast.innerHTML = `<i class="${ic} text-base mr-2"></i><span>${m}</span>`;
+            toast.innerHTML = `<i class="${ic} text-base mr-2"></i><span class="flex-1">${m}</span>`;
             c.appendChild(toast);
-            setTimeout(() => { toast.classList.add('hide'); setTimeout(() => toast.remove(), 300); }, 3000);
+            setTimeout(() => { toast.classList.add('hide'); setTimeout(() => toast.remove(), 300); }, duration);
         }
 
         function switchTab(t) {
@@ -489,22 +512,17 @@
             }
         }
 
-        // ================= FUNÇÃO DE LEITURA E EXTRAÇÃO DA SUA IMAGEM =================
         function processMagicPaste() {
             const texto = document.getElementById('magic-paste').value;
             if(!texto.trim()) { showToast('Cole o texto da página primeiro!', 'error'); return; }
 
-            // 1. Captura o ID e Descrição (Ex: "22349 : CO 26 264...")
             const headerMatch = texto.match(/(\d{4,7})\s*:\s*(.+)/);
             if(headerMatch) {
                 document.getElementById('modal-id').value = headerMatch[1].trim();
-                
-                // Limpa possíveis resíduos de botões clonados no texto da descrição
                 let desc = headerMatch[2].split('Aplicar macro')[0].trim();
                 document.getElementById('modal-descricao').value = desc;
             }
 
-            // 2. Captura o Solicitante (Abaixo do bloco Solicitante)
             const solicitanteMatch = texto.match(/Solicitante[\r\n\s]+(?:info)?\s*([A-Za-zÀ-ÿ\s]{3,40})/i);
             if(solicitanteMatch) {
                 const nome = solicitanteMatch[1].trim();
@@ -512,7 +530,6 @@
                 autocompleteArea(nome); 
             }
 
-            // 3. Captura o Atendente
             const atendenteMatch = texto.match(/Atendente[\r\n\s]+([A-Za-zÀ-ÿ\s]{3,40})/i);
             if(atendenteMatch) {
                 const nomeAtend = atendenteMatch[1].trim();
@@ -526,25 +543,21 @@
                     }
                 }
                 if(!encontrado) {
-                    // Adiciona temporariamente se não existir na lista fixa
                     let opt = document.createElement('option');
                     opt.value = nomeAtend; opt.text = nomeAtend;
                     selectAtend.add(opt); selectAtend.value = nomeAtend;
                 }
             }
 
-            // 4. Captura o Tipo
             const tipoMatch = texto.match(/Tipo[\r\n\s]+([^\r\n]+)/i);
             if(tipoMatch) { document.getElementById('modal-tipo').value = tipoMatch[1].trim().split('   ')[0]; }
 
-            // 5. Captura a Prioridade
             const prioMatch = texto.match(/Prioridade[\r\n\s]+(Normal|Alta|Baixa|Urgente)/i);
             if(prioMatch) {
                 let p = prioMatch[1].toUpperCase();
                 document.getElementById('modal-prioridade').value = (p === 'ALTA' || p === 'URGENTE') ? 'ALTA' : 'NORMAL';
             }
 
-            // 6. Captura e mapeia o Status
             const statusMatch = texto.match(/Status[\r\n\s]+([^\r\n]+)/i);
             if(statusMatch) {
                 const s = statusMatch[1].toUpperCase();
@@ -577,7 +590,6 @@
             const filterStatus = document.getElementById('filter-status').value;
             const filterPriority = document.getElementById('filter-priority').value;
             body.innerHTML = '';
-
             let filtered = chamados.filter(item => {
                 const matchSearch = !search || 
                     (item.id && item.id.toString().toLowerCase().includes(search)) || 
@@ -588,7 +600,6 @@
                 const matchPriority = !filterPriority || item.prioridade === filterPriority;
                 return matchSearch && matchStatus && matchPriority;
             });
-
             document.getElementById('stat-atendimento').innerText = chamados.filter(c => c.status === 'EM ATENDIMENTO').length;
             document.getElementById('stat-retorno').innerText = chamados.filter(c => c.status === 'AGUARDANDO RETORNO').length;
             document.getElementById('stat-pausado').innerText = chamados.filter(c => c.status === 'ATENDIMENTO PAUSADO').length;
@@ -596,7 +607,7 @@
 
             if(filtered.length === 0) { emptyState.classList.remove('hidden'); return; }
             emptyState.classList.add('hidden');
-
+            
             filtered.forEach((item) => {
                 let statusClass = item.status === 'EM ATENDIMENTO' ? 'bg-blue-100 text-blue-800' : item.status === 'AGUARDANDO RETORNO' ? 'bg-amber-100 text-amber-800' : 'bg-purple-100 text-purple-800';
                 let prioClass = item.prioridade === 'ALTA' ? 'bg-rose-100 text-rose-800 font-bold' : 'bg-slate-100 text-slate-600';
@@ -623,7 +634,8 @@
         }
 
         function openModal(id = null) {
-            const form = document.getElementById('chamado-form'); form.reset();
+            const form = document.getElementById('chamado-form');
+            form.reset();
             document.getElementById('edit-index').value = ''; document.getElementById('modal-id').disabled = false;
             autocompleteArea('');
             if(id) {
@@ -670,21 +682,35 @@
                 descricao: document.getElementById('modal-descricao').value.trim(),
                 ultima_mod: new Date().toISOString().split('T')[0]
             };
-
+            
             if (solicitante && area) { db.collection("vinculos").doc(solicitante).set({ area: area }); }
             if(!editId && chamados.some(c => c.id.toString() === id.toString())) { showToast('ID já cadastrado!', 'error'); return; }
             if(!editId) itemData.data_criacao = new Date().toISOString().split('T')[0];
-
+            
             db.collection("chamados").doc(id).set(itemData, { merge: true }).then(() => {
                 showToast(`Chamado #${id} atualizado.`); closeModal();
             });
         }
 
         function editChamado(id) { openModal(id); }
-        function deleteChamado(id) { if(confirm(`Excluir #${id}?`)) { db.collection("chamados").doc(id).delete(); } }
+        
+        // Modificado com lógica de Desfazer
+        function deleteChamado(id) { 
+            if(confirm(`Excluir #${id}?`)) { 
+                const item = chamados.find(c => c.id.toString() === id.toString());
+                if(item) {
+                    undoStack.push({ type: 'chamado', id: id, data: item });
+                    db.collection("chamados").doc(id).delete().then(() => {
+                        // Toast de 6 segundos com botão embutido
+                        showToast(`Chamado #${id} excluído. <button onclick="undoLastAction()" class="ml-2 underline font-bold hover:text-emerald-900 cursor-pointer">Desfazer (Ctrl+Z)</button>`, 'success', 6000);
+                    });
+                }
+            } 
+        }
 
         function buildCharts() {
-            if(instChartStatus) instChartStatus.destroy(); if(instChartAtendentes) instChartAtendentes.destroy();
+            if(instChartStatus) instChartStatus.destroy();
+            if(instChartAtendentes) instChartAtendentes.destroy();
             const cAtend = chamados.filter(c => c.status === 'EM ATENDIMENTO').length;
             const cRet = chamados.filter(c => c.status === 'AGUARDANDO RETORNO').length;
             const cPaus = chamados.filter(c => c.status === 'ATENDIMENTO PAUSADO').length;
@@ -694,9 +720,10 @@
                 data: { labels: ['Atendimento', 'Retorno', 'Pausado'], datasets: [{ data: [cAtend, cRet, cPaus], backgroundColor: ['#3b82f6', '#f59e0b', '#a855f7'], borderWidth: 0 }] },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
             });
-
+            
             const listaA = ['Juliana Ordones', 'Izabela Dobscha', 'Fernando Moura', 'Erica Hernandes', 'Lívia Castro', 'Glayciene Luciano Candido'];
             const valoresA = listaA.map(at => chamados.filter(c => c.atendente === at).length);
+            
             instChartAtendentes = new Chart(document.getElementById('chartAtendentes').getContext('2d'), {
                 type: 'bar',
                 data: { labels: listaA.map(a => a.split(' ')[0]), datasets: [{ label: 'Chamados', data: valoresA, backgroundColor: '#10b981', borderRadius: 4 }] },
@@ -704,7 +731,8 @@
             });
 
             const areaRankingDiv = document.getElementById('area-ranking'); areaRankingDiv.innerHTML = '';
-            let areaCounts = {}; chamados.forEach(c => { if(c.area) areaCounts[c.area] = (areaCounts[c.area] || 0) + 1; });
+            let areaCounts = {};
+            chamados.forEach(c => { if(c.area) areaCounts[c.area] = (areaCounts[c.area] || 0) + 1; });
             Object.entries(areaCounts).sort((a,b) => b[1] - a[1]).slice(0, 6).forEach(([name, count]) => {
                 const card = document.createElement('div'); card.className = "bg-slate-50 border border-slate-200 p-3 rounded-xl text-center shadow-sm";
                 card.innerHTML = `<div class="text-[10px] font-bold text-slate-500 truncate uppercase">${name}</div><div class="text-xl font-black text-purple-600 mt-0.5">${count}</div>`;
@@ -713,7 +741,8 @@
         }
 
         function renderVincTable() {
-            const tbody = document.getElementById('vinc-table-body'); tbody.innerHTML = '';
+            const tbody = document.getElementById('vinc-table-body');
+            tbody.innerHTML = '';
             const entries = Object.entries(vinculacaoArea);
             if(entries.length === 0) { tbody.innerHTML = `<tr><td colspan="3" class="px-4 py-6 text-center text-slate-400">Nenhum vínculo.</td></tr>`; return; }
             entries.forEach(([solicitante, area]) => {
@@ -723,11 +752,32 @@
             });
         }
 
-        function deleteVinc(s) { db.collection("vinculos").doc(s).delete(); }
-        function clearAllVinc() { if(confirm("Resetar?")) { db.collection("vinculos").get().then(s => s.forEach(d => d.ref.delete())); } }
+        // Modificado com lógica de Desfazer
+        function deleteVinc(s) { 
+            const area = vinculacaoArea[s];
+            if(area) {
+                undoStack.push({ type: 'vinculo', id: s, data: { area: area } });
+                db.collection("vinculos").doc(s).delete().then(() => {
+                    showToast(`Vínculo apagado. <button onclick="undoLastAction()" class="ml-2 underline font-bold hover:text-emerald-900 cursor-pointer">Desfazer (Ctrl+Z)</button>`, 'success', 6000);
+                });
+            }
+        }
+        
+        // Modificado com lógica de Desfazer
+        function clearAllVinc() { 
+            if(confirm("Resetar?")) { 
+                const snapshot = Object.entries(vinculacaoArea).map(([s, a]) => ({id: s, data: {area: a}}));
+                undoStack.push({ type: 'vinculos_all', items: snapshot });
+                db.collection("vinculos").get().then(s => {
+                    s.forEach(d => d.ref.delete());
+                    showToast(`Vínculos resetados. <button onclick="undoLastAction()" class="ml-2 underline font-bold hover:text-emerald-900 cursor-pointer">Desfazer (Ctrl+Z)</button>`, 'success', 6000);
+                });
+            } 
+        }
 
         function handleExcelImport(e) {
-            const file = e.target.files[0]; if (!file) return;
+            const file = e.target.files[0];
+            if (!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
                 const data = new Uint8Array(e.target.result), workbook = XLSX.read(data, { type: 'array' });
