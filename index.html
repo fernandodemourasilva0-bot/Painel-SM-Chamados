@@ -4,19 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel de Gestão de Chamados Pro</title>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome para Ícones -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- ExcelJS e FileSaver -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <!-- SheetJS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <!-- SDKs do Firebase Compat (essenciais para rodar direto no HTML) -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     
@@ -68,7 +62,6 @@
 </head>
 <body class="bg-slate-50 text-gray-800 antialiased h-screen flex flex-col md:flex-row overflow-hidden">
 
-    <!-- BARRA SUPERIOR MOBILE -->
     <div class="md:hidden h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 z-30 shrink-0">
         <div class="flex items-center">
             <div class="bg-blue-600 p-2 rounded-lg text-white mr-3">
@@ -81,9 +74,7 @@
         </button>
     </div>
 
-    <!-- ================= SIDEBAR (SUPORTE DESKTOP E MOBILE) ================= -->
     <aside id="sidebar" class="fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 w-64 bg-white flex flex-col border-r border-gray-200 z-40 transition-transform duration-300 ease-in-out h-full shrink-0">
-        <!-- Título / Header da Sidebar -->
         <div class="h-20 flex items-center px-6 border-b border-gray-200 bg-white">
             <div class="bg-blue-600 p-2.5 rounded-lg shadow-md shadow-blue-500/20 flex items-center justify-center mr-3">
                 <i class="fa-solid fa-layer-group text-lg text-white"></i>
@@ -94,7 +85,6 @@
             </div>
         </div>
 
-        <!-- Links de Navegação -->
         <nav class="flex-1 py-6 space-y-1 overflow-y-auto">
             <button onclick="switchTab('dashboard')" id="tab-dashboard-btn" class="sidebar-btn w-full flex items-center px-6 py-3 text-sm font-semibold border-l-4 bg-blue-50/80 border-blue-600 text-blue-700 transition-all duration-200">
                 <i class="fa-solid fa-table-list w-6 text-center text-blue-600"></i>
@@ -117,13 +107,10 @@
         </div>
     </aside>
 
-    <!-- BACKDROP MOBILE PARA FECHAR MENU AO CLICAR FORA -->
     <div id="sidebar-backdrop" onclick="toggleMobileSidebar()" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-30 hidden md:hidden"></div>
 
-    <!-- ================= CONTEÚDO PRINCIPAL ================= -->
     <main class="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         
-        <!-- HEADER SUPERIOR DE AÇÕES -->
         <header class="hidden md:flex h-20 bg-white border-b border-gray-200 items-center justify-between px-8 z-10 shrink-0">
             <div class="flex items-center text-gray-500 text-sm font-medium">
                 <i class="fa-regular fa-calendar mr-2 text-slate-400"></i>
@@ -143,7 +130,6 @@
             </div>
         </header>
 
-        <!-- AREA DE COMPARTILHAMENTO DE BOTÕES NO MOBILE -->
         <div class="md:hidden bg-white px-4 py-3 border-b border-gray-200 flex gap-2 shrink-0">
             <label class="flex-1 flex items-center justify-center space-x-1 py-2 bg-slate-100 rounded-lg text-xs font-bold text-slate-700 cursor-pointer">
                 <i class="fa-solid fa-file-import"></i>
@@ -156,12 +142,9 @@
             </button>
         </div>
 
-        <!-- ÁREA DE SCROLL DAS ABAS -->
         <div class="flex-1 overflow-y-auto p-4 md:p-8 relative">
             
-            <!-- ABA 1: PAINEL DE CONTROLE -->
             <div id="tab-dashboard" class="tab-content active space-y-6">
-                <!-- Cards de Métricas (Grid Responsivo) -->
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                     <div class="bg-white p-4 md:p-5 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between relative overflow-hidden">
                         <div class="absolute w-1 h-full bg-blue-500 left-0 top-0"></div>
@@ -200,7 +183,6 @@
                     </div>
                 </div>
 
-                <!-- Barra de Filtros e Busca -->
                 <div class="bg-white p-3 rounded-xl border border-gray-200 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 flex-1">
                         <div class="relative">
@@ -225,7 +207,6 @@
                     </button>
                 </div>
 
-                <!-- Tabela com scroll horizontal responsivo para celular -->
                 <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
                     <div class="overflow-x-auto w-full">
                         <table class="w-full text-left border-collapse min-w-[900px]">
@@ -242,8 +223,7 @@
                                 </tr>
                             </thead>
                             <tbody id="chamados-table-body" class="divide-y divide-gray-100 text-sm">
-                                <!-- Preenchido dinamicamente via Firebase -->
-                            </tbody>
+                                </tbody>
                         </table>
                     </div>
                     <div id="empty-state" class="hidden py-16 text-center text-slate-400">
@@ -253,7 +233,6 @@
                 </div>
             </div>
 
-            <!-- ABA 2: METRICAS -->
             <div id="tab-analytics" class="tab-content space-y-6">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="bg-white p-4 md:p-6 rounded-xl border border-gray-200 shadow-sm">
@@ -284,7 +263,6 @@
                 </div>
             </div>
 
-            <!-- ABA 3: VINCULOS -->
             <div id="tab-vinc_manager" class="tab-content space-y-6">
                 <div class="bg-white p-4 md:p-6 rounded-xl border border-gray-200 shadow-sm">
                     <h4 class="text-xs md:text-sm font-bold text-slate-700 mb-4 flex items-center space-x-2">
@@ -329,7 +307,6 @@
         </div>
     </main>
 
-    <!-- MODAL DE CADASTRO ADAPTADO PARA MOBILE -->
     <div id="chamado-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden items-center justify-center z-50 p-3 opacity-0 transition-opacity duration-200">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-xl overflow-hidden max-h-[90vh] flex flex-col transform scale-95 transition-transform duration-200" id="modal-container">
             <div class="bg-slate-800 px-4 py-4 flex items-center justify-between shrink-0">
@@ -369,7 +346,7 @@
                     </div>
                     <div>
                         <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Área Solicitante *</label>
-                        <input type="text" id="modal-area" required class="w-full border border-slate-200 rounded-lg px-3 py-2 outline-none bg-slate-50">
+                        <input type="text" id="modal-area" required class="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs md:text-sm outline-none bg-slate-50">
                     </div>
                 </div>
 
@@ -403,10 +380,8 @@
         </div>
     </div>
 
-    <!-- CONTAINER DE NOTIFICAÇÕES (TOASTS) -->
     <div id="toast-container"></div>
 
-    <!-- SCRIPT DE INTELIGÊNCIA E SINCRONIZAÇÃO REVISADO -->
     <script>
         // ================= INTELIGÊNCIA FIREBASE (CONEXÃO REAL) =================
         const firebaseConfig = {
@@ -420,13 +395,8 @@
             measurementId: "G-2HFKK1ZW72"
         };
 
-        // Inicializa o Firebase de forma segura
-        try {
-            firebase.initializeApp(firebaseConfig);
-        } catch (error) {
-            console.error("Erro ao inicializar o Firebase:", error);
-        }
-        
+        // Inicializa o Firebase
+        firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
         let chamados = [];
@@ -434,7 +404,10 @@
         let instChartStatus = null;
         let instChartAtendentes = null;
 
-        // OUVINTE EM TEMPO REAL: Atualização instantânea na nuvem
+        // Memória para o histórico de exclusões (Ctrl + Z)
+        let ultimoChamadoDeletado = null;
+
+        // OUVINTE EM TEMPO REAL: Toda alteração no banco atualiza o PC e o Celular na hora!
         db.collection("chamados").onSnapshot((snapshot) => {
             chamados = [];
             snapshot.forEach((doc) => {
@@ -442,9 +415,6 @@
             });
             renderTable();
             if(document.getElementById('tab-analytics').classList.contains('active')) buildCharts();
-        }, (error) => {
-            console.error("Erro ao carregar chamados:", error);
-            showToast("Erro ao sincronizar chamados em tempo real.", "error");
         });
 
         db.collection("vinculos").onSnapshot((snapshot) => {
@@ -453,14 +423,54 @@
                 vinculacaoArea[doc.id] = doc.data().area;
             });
             if(document.getElementById('tab-vinc_manager').classList.contains('active')) renderVincTable();
-        }, (error) => {
-            console.error("Erro ao carregar vínculos:", error);
         });
 
         // Configuração de Data e Visual
         document.getElementById('data-hoje').innerText = new Date().toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-        // Controle do Menu no Celular
+        // Atalho de Teclado Global para Ctrl + Z
+        window.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+                // Evita conflitos com inputs de texto normais
+                if (document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+                    e.preventDefault();
+                    desfazerExclusao();
+                }
+            }
+        });
+
+        // Função para reverter a exclusão
+        function desfazerExclusao() {
+            if (!ultimoChamadoDeletado) return;
+            
+            const item = ultimoChamadoDeletado;
+            db.collection("chamados").doc(item.id).set(item).then(() => {
+                showToast(`Chamado #${item.id} restaurado com sucesso!`, 'success');
+                ultimoChamadoDeletado = null; // Limpa para evitar restaurações duplicadas
+            }).catch(() => {
+                showToast('Erro ao restaurar chamado da nuvem.', 'error');
+            });
+        }
+
+        // Modificação no sistema de avisos para aceitar um botão de ação rápida
+        function showToast(message, type = 'success', actionHtml = '') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            let bgClass = type === 'error' ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800';
+            let iconClass = type === 'error' ? 'fa-solid fa-circle-xmark text-rose-500' : 'fa-solid fa-circle-check text-emerald-500';
+
+            toast.className = `toast border flex items-center justify-between p-3 rounded-xl shadow-lg font-medium text-xs md:text-sm bg-white ${bgClass}`;
+            toast.innerHTML = `
+                <div class="flex items-center">
+                    <i class="${iconClass} text-base mr-2"></i>
+                    <span>${message}</span>
+                </div>
+                ${actionHtml}
+            `;
+            container.appendChild(toast);
+            setTimeout(() => { toast.classList.add('hide'); setTimeout(() => toast.remove(), 300); }, 4500);
+        }
+
         function toggleMobileSidebar() {
             const sidebar = document.getElementById('sidebar');
             const backdrop = document.getElementById('sidebar-backdrop');
@@ -477,18 +487,6 @@
             }
         }
 
-        function showToast(message, type = 'success') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            let bgClass = type === 'error' ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800';
-            let iconClass = type === 'error' ? 'fa-solid fa-circle-xmark text-rose-500' : 'fa-solid fa-circle-check text-emerald-500';
-
-            toast.className = `toast border flex items-center p-3 rounded-xl shadow-lg font-medium text-xs md:text-sm bg-white ${bgClass}`;
-            toast.innerHTML = `<i class="${iconClass} text-base mr-2"></i><span>${message}</span>`;
-            container.appendChild(toast);
-            setTimeout(() => { toast.classList.add('hide'); setTimeout(() => toast.remove(), 300); }, 3000);
-        }
-
         function switchTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.sidebar-btn').forEach(el => {
@@ -502,7 +500,6 @@
             if (tabName === 'analytics') buildCharts();
             if (tabName === 'vinc_manager') renderVincTable();
             
-            // Fecha a barra lateral se estiver no celular
             if(window.innerWidth < 768) toggleMobileSidebar();
         }
 
@@ -528,9 +525,6 @@
             db.collection("vinculos").doc(sol).set({ area: area }).then(() => {
                 document.getElementById('vinc-manual-form').reset();
                 showToast('Novo vínculo salvo na nuvem!');
-            }).catch(err => {
-                showToast('Erro ao salvar vínculo.', 'error');
-                console.error(err);
             });
         }
 
@@ -544,11 +538,7 @@
             body.innerHTML = '';
 
             let filtered = chamados.filter(item => {
-                const matchSearch = !search || 
-                    (item.id && item.id.toString().toLowerCase().includes(search)) || 
-                    (item.solicitante && item.solicitante.toLowerCase().includes(search)) || 
-                    (item.atendente && item.atendente.toLowerCase().includes(search)) || 
-                    (item.descricao && item.descricao.toLowerCase().includes(search));
+                const matchSearch = !search || item.id.toString().toLowerCase().includes(search) || item.solicitante.toLowerCase().includes(search) || item.atendente.toLowerCase().includes(search) || item.descricao.toLowerCase().includes(search);
                 const matchStatus = !filterStatus || item.status === filterStatus;
                 const matchPriority = !filterPriority || item.prioridade === filterPriority;
                 return matchSearch && matchStatus && matchPriority;
@@ -646,9 +636,7 @@
                 ultima_mod: new Date().toISOString().split('T')[0]
             };
 
-            if (solicitante && area) {
-                db.collection("vinculos").doc(solicitante).set({ area: area }).catch(err => console.error("Erro ao salvar vinculo implícito:", err));
-            }
+            if (solicitante && area) db.collection("vinculos").doc(solicitante).set({ area: area });
 
             if(!editId && chamados.some(c => c.id.toString() === id.toString())) {
                 showToast('Erro: Este ID já existe!', 'error');
@@ -660,21 +648,21 @@
             db.collection("chamados").doc(id).set(itemData, { merge: true }).then(() => {
                 showToast(`Chamado #${id} salvo na nuvem.`);
                 closeModal();
-            }).catch(err => {
-                showToast('Erro ao salvar o chamado na nuvem.', 'error');
-                console.error(err);
             });
         }
 
         function editChamado(id) { openModal(id); }
         
         function deleteChamado(id) {
-            if(confirm(`Excluir chamado #${id} da nuvem?`)) {
+            const itemParaDeletar = chamados.find(c => c.id.toString() === id.toString());
+            
+            if(itemParaDeletar && confirm(`Excluir chamado #${id} da nuvem?`)) {
+                // Guarda uma cópia local antes de apagar da nuvem
+                ultimoChamadoDeletado = { ...itemParaDeletar };
+
                 db.collection("chamados").doc(id).delete().then(() => {
-                    showToast('Chamado removido com sucesso.', 'error');
-                }).catch(err => {
-                    showToast('Erro ao excluir chamado.', 'error');
-                    console.error(err);
+                    const btnHtml = `<button onclick="desfazerExclusao()" class="ml-4 bg-rose-600 text-white px-2 py-1 rounded text-xs font-bold hover:bg-rose-700 transition">Desfazer (Ctrl+Z)</button>`;
+                    showToast(`Chamado #${id} removido.`, 'error', btnHtml);
                 });
             }
         }
@@ -768,17 +756,12 @@
                 const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
 
                 let count = 0;
-                const batch = db.batch(); // Otimizado usando batch para evitar requisições individuais lentas
-
                 json.forEach(row => {
-                    const rawId = row['ID'] || row['id'] || row['Número'] || row['NUMERO'];
-                    if (!rawId) return;
-
-                    const id = rawId.toString().trim();
-                    const itemRef = db.collection("chamados").doc(id);
+                    const id = row['ID'] || row['id'] || row['Número'] || row['NUMERO'];
+                    if (!id) return;
 
                     const item = {
-                        id: id,
+                        id: id.toString(),
                         prioridade: (row['PRIORIDADE'] || row['prioridade'] || 'NORMAL').toString().toUpperCase().trim() === 'ALTA' ? 'ALTA' : 'NORMAL',
                         status: (row['STATUS'] || row['status'] || 'EM ATENDIMENTO').toString().toUpperCase().trim(),
                         solicitante: row['SOLICITANTE'] || row['solicitante'] || 'Desconhecido',
@@ -790,21 +773,11 @@
                         ultima_mod: new Date().toISOString().split('T')[0]
                     };
 
-                    batch.set(itemRef, item, { merge: true });
-
-                    if (item.solicitante && item.area) {
-                        const vincRef = db.collection("vinculos").doc(item.solicitante);
-                        batch.set(vincRef, { area: item.area });
-                    }
+                    db.collection("chamados").doc(item.id).set(item, { merge: true });
+                    if (item.solicitante && item.area) db.collection("vinculos").doc(item.solicitante).set({ area: item.area });
                     count++;
                 });
-
-                batch.commit().then(() => {
-                    showToast(`${count} itens sincronizados com a Nuvem!`);
-                }).catch(err => {
-                    showToast('Erro ao sincronizar lote de dados.', 'error');
-                    console.error(err);
-                });
+                showToast(`${count} itens sincronizados com a Nuvem!`);
             };
             reader.readAsArrayBuffer(file);
         }
