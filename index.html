@@ -232,7 +232,6 @@
                             <option value="EM ATENDIMENTO">Em Atendimento</option>
                             <option value="AGUARDANDO RETORNO">Aguardando Retorno</option>
                             <option value="ATENDIMENTO PAUSADO">Atendimento Pausado</option>
-                            <option value="FECHADO">Fechado</option>
                         </select>
                         <select id="filter-priority" onchange="handleFilterChange()" class="bg-gray-50 border-none dark:bg-slate-700 dark:text-slate-100 rounded-lg text-xs md:text-sm font-medium px-3 py-2 outline-none cursor-pointer">
                             <option value="">Todas as Prioridades</option>
@@ -248,21 +247,21 @@
 
                 <div class="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden">
                     <div class="overflow-x-auto w-full">
-                        <table class="w-full text-left border-collapse min-w-[900px]">
+                        <table class="w-full text-left border-collapse min-w-[1100px]">
                             <thead>
-    <tr class="bg-slate-50 border-b border-gray-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-        <th class="px-6 py-4">ID</th>
-        <th class="px-6 py-4">Prioridade</th>
-        <th class="px-6 py-4">Data de Criação</th>
-        <th class="px-6 py-4">Última Modificação</th>
-        <th class="px-6 py-4">Status</th>
-        <th class="px-6 py-4">Solicitante / Área</th>
-        <th class="px-6 py-4">Atendente</th>
-        <th class="px-6 py-4">Tipo</th>
-        <th class="px-6 py-4">Descrição</th>
-        <th class="px-6 py-4 text-right">Ações</th>
-    </tr>
-</thead>
+                                <tr class="bg-slate-50 dark:bg-slate-900/50 border-b border-gray-200 dark:border-slate-700 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                    <th class="px-6 py-4">ID</th>
+                                    <th class="px-6 py-4">Prioridade</th>
+                                    <th class="px-6 py-4">Data de Criação</th>
+                                    <th class="px-6 py-4">Última Modificação</th>
+                                    <th class="px-6 py-4">Status</th>
+                                    <th class="px-6 py-4">Solicitante / Área</th>
+                                    <th class="px-6 py-4">Atendente</th>
+                                    <th class="px-6 py-4">Tipo</th>
+                                    <th class="px-6 py-4">Descrição</th>
+                                    <th class="px-6 py-4 text-right">Ações</th>
+                                </tr>
+                            </thead>
                             <tbody id="chamados-table-body" class="divide-y divide-gray-100 dark:divide-slate-700/50 text-sm"></tbody>
                         </table>
                     </div>
@@ -475,7 +474,7 @@
         const itemsPerPage = 20;
         
         // ----------------------------------------------------
-        // LÓGICA DE VERIFICAÇÃO DE LOGIN (REINSERIDA)
+        // LÓGICA DE VERIFICAÇÃO DE LOGIN
         // ----------------------------------------------------
         document.addEventListener('DOMContentLoaded', () => {
             updateDarkModeIcons();
@@ -570,19 +569,10 @@
         db.collection("chamados").onSnapshot((snapshot) => {
             chamados = [];
             snapshot.forEach(doc => chamados.push(doc.data()));
-            // Função para converter data YYYY-MM-DD para DD/MM/YYYY
-function formatarDataBR(data) {
-    if (!data) return '-';
-    if (typeof data === 'string' && data.includes('-')) {
-        const partes = data.split('T')[0].split('-');
-        if (partes.length === 3) return `${partes[2]}/${partes[1]}/${partes[0]}`;
-    }
-    return data;
-}
             renderTable();
             if(document.getElementById('tab-analytics').classList.contains('active')) buildCharts();
         });
-
+        
         db.collection("vinculos").onSnapshot((snapshot) => {
             vinculacaoArea = {};
             snapshot.forEach(doc => vinculacaoArea[doc.id] = doc.data().area);
@@ -602,7 +592,6 @@ function formatarDataBR(data) {
             }
         }
 
-        // FUNÇÃO DE NOTIFICAÇÃO PADRÃO
         function showToast(m, t = 'success', duration = 3000) {
             const c = document.getElementById('toast-container');
             if(!c) return;
@@ -615,7 +604,6 @@ function formatarDataBR(data) {
             setTimeout(() => { toast.classList.add('hide'); setTimeout(() => toast.remove(), 300); }, duration);
         }
 
-        // NOVA FUNÇÃO DE NOTIFICAÇÃO EXCLUSIVA PARA DESFAZER
         function showToastWithUndo(m, duration = 6000) {
             const c = document.getElementById('toast-container');
             if(!c) return;
@@ -688,9 +676,9 @@ function formatarDataBR(data) {
                 document.getElementById('modal-descricao').value = desc;
             }
 
-            const solicitanteMatch = texto.match(/Solicitante[\r\n\s]+(?:info)?\s*([A-Za-zÀ-ÿ\s]{3,40})/i);
+            const solicitanteMatch = texto.match(/Solicitante[\r\n\s]+(info)?\s*([A-Za-zÀ-ÿ\s]{3,40})/i);
             if(solicitanteMatch) {
-                const nome = solicitanteMatch[1].trim();
+                const nome = solicitanteMatch[2].trim();
                 document.getElementById('modal-solicitante').value = nome;
                 autocompleteArea(nome); 
             }
@@ -749,12 +737,12 @@ function formatarDataBR(data) {
             });
         }
 
-        // Lógica de Redirecionamento de Página ao Mudar Filtros
         function handleFilterChange() {
             currentPage = 1;
             renderTable();
         }
 
+        // Funções de Paginação
         function prevPage() {
             if (currentPage > 1) {
                 currentPage--;
@@ -783,6 +771,18 @@ function formatarDataBR(data) {
                 currentPage++;
                 renderTable();
             }
+        }
+
+        // ----------------------------------------------------
+        // FORMATADOR DE DATA BR (DD/MM/YYYY)
+        // ----------------------------------------------------
+        function formatarDataBR(data) {
+            if (!data) return '-';
+            if (typeof data === 'string' && data.includes('-')) {
+                const partes = data.split('T')[0].split('-');
+                if (partes.length === 3) return `${partes[2]}/${partes[1]}/${partes[0]}`;
+            }
+            return data;
         }
 
         function renderTable() {
@@ -817,7 +817,6 @@ function formatarDataBR(data) {
             emptyState.classList.add('hidden');
             paginationControls.classList.remove('hidden');
             
-            // EXECUÇÃO DO SLICE DA PAGINAÇÃO
             const totalItems = filtered.length;
             const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
             if (currentPage > totalPages) currentPage = totalPages;
@@ -836,26 +835,27 @@ function formatarDataBR(data) {
                 const tr = document.createElement('tr');
                 tr.className = "table-row-hover bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/30 border-b border-gray-100 dark:border-slate-700/50";
                 tr.innerHTML = `
-    <td class="px-6 py-4 font-mono font-bold text-slate-800">#${item.id}</td>
-    <td class="px-6 py-4"><span class="px-2.5 py-0.5 rounded text-[11px] ${prioClass}">${item.prioridade}</span></td>
-    
-    <!-- Novas colunas inseridas aqui -->
-    <td class="px-6 py-4 text-xs font-medium text-slate-500">${formatarDataBR(item.data_criacao)}</td>
-    <td class="px-6 py-4 text-xs font-medium text-slate-500">${formatarDataBR(item.ultima_mod)}</td>
-    
-    <td class="px-6 py-4"><span class="px-2.5 py-0.5 rounded text-[11px] font-bold ${statusClass}">${item.status}</span></td>
-    <td class="px-6 py-4">
-        <div class="font-bold text-slate-800">${item.solicitante}</div>
-        <div class="text-[11px] text-blue-600 font-bold uppercase mt-0.5">${item.area}</div>
-    </td>
-    <td class="px-6 py-4 font-medium text-slate-600">${item.atendente}</td>
-    <td class="px-6 py-4"><span class="bg-slate-50 text-slate-700 text-xs px-2 py-0.5 rounded font-mono border">${item.tipo || 'N/A'}</span></td>
-    <td class="px-6 py-4 text-xs max-w-[180px] truncate text-slate-400">${item.descricao || '-'}</td>
-    <td class="px-6 py-4 text-right space-x-1 whitespace-nowrap">
-        <button onclick="editChamado('${item.id}')" class="text-blue-500 bg-blue-50 p-2 rounded-lg"><i class="fa-solid fa-pen-to-square"></i></button>
-        <button onclick="deleteChamado('${item.id}')" class="text-rose-500 bg-rose-50 p-2 rounded-lg"><i class="fa-solid fa-trash-can"></i></button>
-    </td>
-`;
+                    <td class="px-6 py-4 font-mono font-bold text-slate-800 dark:text-slate-200">#${item.id}</td>
+                    <td class="px-6 py-4"><span class="px-2.5 py-0.5 rounded text-[11px] ${prioClass}">${item.prioridade}</span></td>
+                    
+                    <!-- Novas colunas integradas com Dark Mode -->
+                    <td class="px-6 py-4 text-xs font-medium text-slate-500 dark:text-slate-400">${formatarDataBR(item.data_criacao)}</td>
+                    <td class="px-6 py-4 text-xs font-medium text-slate-500 dark:text-slate-400">${formatarDataBR(item.ultima_mod)}</td>
+                    
+                    <td class="px-6 py-4"><span class="px-2.5 py-0.5 rounded text-[11px] font-bold ${statusClass}">${item.status}</span></td>
+                    <td class="px-6 py-4">
+                        <div class="font-bold text-slate-800 dark:text-slate-200">${item.solicitante}</div>
+                        <div class="text-[11px] text-blue-600 dark:text-blue-400 font-bold uppercase mt-0.5">${item.area || 'GERAL'}</div>
+                    </td>
+                    <td class="px-6 py-4 font-medium text-slate-600 dark:text-slate-300">${item.atendente}</td>
+                    <td class="px-6 py-4"><span class="bg-slate-50 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs px-2 py-0.5 rounded font-mono border dark:border-slate-600">${item.tipo || 'N/A'}</span></td>
+                    <td class="px-6 py-4 text-xs max-w-[180px] truncate text-slate-400 dark:text-slate-400" title="${item.descricao || ''}">${item.descricao || '-'}</td>
+                    <td class="px-6 py-4 text-right space-x-1 whitespace-nowrap">
+                        <button onclick="copyChamado('${item.id}')" class="text-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 p-2 rounded-lg" title="Copiar para Planilha"><i class="fa-solid fa-copy"></i></button>
+                        <button onclick="editChamado('${item.id}')" class="text-blue-500 bg-blue-50 dark:bg-blue-950/40 p-2 rounded-lg" title="Editar"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button onclick="deleteChamado('${item.id}')" class="text-rose-500 bg-rose-50 dark:bg-rose-950/40 p-2 rounded-lg" title="Excluir"><i class="fa-solid fa-trash-can"></i></button>
+                    </td>
+                `;
                 body.appendChild(tr);
             });
         }
@@ -898,6 +898,9 @@ function formatarDataBR(data) {
             const solicitante = document.getElementById('modal-solicitante').value.trim();
             const area = document.getElementById('modal-area').value.trim().toUpperCase();
             
+            // Busca o registro original se for edição para herdar a data de criação intacta
+            const originalItem = editId ? chamados.find(c => String(c.id) === String(editId)) : null;
+            
             const itemData = {
                 id: id,
                 prioridade: document.getElementById('modal-prioridade').value,
@@ -912,11 +915,38 @@ function formatarDataBR(data) {
             
             if (solicitante && area) { db.collection("vinculos").doc(solicitante).set({ area: area }); }
             if(!editId && chamados.some(c => c.id && String(c.id) === String(id))) { showToast('ID já cadastrado!', 'error'); return; }
-            if(!editId) itemData.data_criacao = new Date().toISOString().split('T')[0];
+            
+            // Lógica robusta para data_criacao
+            if (!editId) {
+                itemData.data_criacao = new Date().toISOString().split('T')[0];
+            } else if (originalItem && originalItem.data_criacao) {
+                itemData.data_criacao = originalItem.data_criacao;
+            } else {
+                itemData.data_criacao = new Date().toISOString().split('T')[0];
+            }
             
             db.collection("chamados").doc(id).set(itemData, { merge: true }).then(() => {
                 showToast(`Chamado #${id} atualizado.`); closeModal();
             });
+        }
+
+        function copyChamado(id) {
+            const idStr = String(id);
+            const item = chamados.find(c => c && c.id && String(c.id) === idStr);
+            
+            if (item) {
+                // Monta a string separada por Tabulação (\t) para colar em colunas de planilhas
+                const textToCopy = `${item.id}\t${item.prioridade}\t${formatarDataBR(item.data_criacao)}\t${formatarDataBR(item.ultima_mod)}\t${item.status}\t${item.solicitante}\t${item.area || 'GERAL'}\t${item.atendente}\t${item.tipo || 'N/A'}\t${item.descricao || '-'}`;
+                
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    showToast(`Chamado #${idStr} copiado para a planilha!`);
+                }).catch(err => {
+                    console.error('Erro ao copiar:', err);
+                    showToast('Erro ao copiar os dados.', 'error');
+                });
+            } else {
+                showToast('Erro interno: Chamado não localizado.', 'error');
+            }
         }
 
         function editChamado(id) { openModal(id); }
@@ -944,7 +974,6 @@ function formatarDataBR(data) {
             if(instChartStatus) instChartStatus.destroy();
             if(instChartAtendentes) instChartAtendentes.destroy();
             
-            // Cores dinâmicas dos gráficos para Dark Mode
             const isDark = document.documentElement.classList.contains('dark');
             const textColor = isDark ? '#cbd5e1' : '#475569';
             const gridColor = isDark ? '#334155' : '#e2e8f0';
@@ -1047,8 +1076,8 @@ function formatarDataBR(data) {
                         atendente: row['ATENDENTE'] || row['atendente'] || 'Juliana Ordones',
                         tipo: row['TIPO'] || row['tipo'] || '',
                         descricao: row['DESCRIÇÃO'] || row['descrição'] || '',
-                        data_criacao: row['DATA DE CRIAÇÃO'] || new Date().toISOString().split('T')[0],
-                        ultima_mod: new Date().toISOString().split('T')[0]
+                        data_criacao: row['DATA DE CRIAÇÃO'] || row['DATA_CRIACAO'] || row['data_criacao'] || new Date().toISOString().split('T')[0],
+                        ultima_mod: row['ÚLTIMA MODIFICAÇÃO'] || row['ULTIMA_MOD'] || row['ultima_mod'] || new Date().toISOString().split('T')[0]
                     };
                     batch.set(itemRef, item, { merge: true });
                     if (item.solicitante && item.area) { batch.set(db.collection("vinculos").doc(item.solicitante), { area: item.area }); }
@@ -1069,11 +1098,33 @@ function formatarDataBR(data) {
             if(chamados.length === 0) { showToast('Sem dados.', 'error'); return; }
             const workbook = new ExcelJS.Workbook(), worksheet = workbook.addWorksheet('Principal');
             worksheet.columns = [
-                { header: 'ID', key: 'id', width: 10 }, { header: 'PRIORIDADE', key: 'prioridade', width: 15 }, { header: 'STATUS', key: 'status', width: 20 },
-                { header: 'SOLICITANTE', key: 'solicitante', width: 25 }, { header: 'ÁREA SOLICITANTE', key: 'area', width: 20 }, { header: 'ATENDENTE', key: 'atendente', width: 20 },
-                { header: 'TIPO', key: 'tipo', width: 12 }, { header: 'DESCRIÇÃO', key: 'descricao', width: 40 }
+                { header: 'ID', key: 'id', width: 10 }, 
+                { header: 'PRIORIDADE', key: 'prioridade', width: 15 }, 
+                { header: 'DATA DE CRIAÇÃO', key: 'data_criacao', width: 18 },
+                { header: 'ÚLTIMA MODIFICAÇÃO', key: 'ultima_mod', width: 18 },
+                { header: 'STATUS', key: 'status', width: 20 },
+                { header: 'SOLICITANTE', key: 'solicitante', width: 25 }, 
+                { header: 'ÁREA SOLICITANTE', key: 'area', width: 20 }, 
+                { header: 'ATENDENTE', key: 'atendente', width: 20 },
+                { header: 'TIPO', key: 'tipo', width: 12 }, 
+                { header: 'DESCRIÇÃO', key: 'descricao', width: 40 }
             ];
-            chamados.forEach(c => worksheet.addRow(c));
+            
+            // Mapeando dados para exportar formatado de acordo com a planilha original
+            chamados.forEach(c => {
+                worksheet.addRow({
+                    id: c.id,
+                    prioridade: c.prioridade,
+                    data_criacao: formatarDataBR(c.data_criacao),
+                    ultima_mod: formatarDataBR(c.ultima_mod),
+                    status: c.status,
+                    solicitante: c.solicitante,
+                    area: c.area || 'GERAL',
+                    atendente: c.atendente,
+                    tipo: c.tipo || 'N/A',
+                    descricao: c.descricao || '-'
+                });
+            });
             const buffer = await workbook.xlsx.writeBuffer(); saveAs(new Blob([buffer]), `HISTORICO_CHAMADOS.xlsx`);
         }
     </script>
